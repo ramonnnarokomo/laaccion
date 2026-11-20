@@ -143,3 +143,25 @@
     background: rgba(121, 47, 54, 0.06);
   }
 }
+
+@media (max-width: 620px) {
+  .poll-list {
+    gap: 14px;
+  }
+  /* Tarjetas con fondo para que la lista no sea solo texto entre rayas. */
+  .poll-card {
+    border-top: 0;
+    border-left: 3px solid var(--burgundy);
+    background: rgba(165, 140, 97, 0.1);
+    padding: 16px 16px 14px;
+    h2 {
+      font-size: 22px;
+    }
+    .byline {
+      margin-bottom: 10px;
+    }
+    &.closed {
+      border-left-color: var(--stone);
+    }
+  }
+}

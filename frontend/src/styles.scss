@@ -487,43 +487,78 @@ main {
   :root {
     --gutter: 17px;
   }
+  /* Cabecera compacta: el logo ya lleva el lema, así que sobran las frases de los lados. */
   .topline {
+    justify-content: center;
+    padding: 12px 0 9px;
     font-size: 12px;
+    span:first-child {
+      display: none;
+    }
   }
   .masthead {
-    padding-top: 17px;
+    padding: 10px 0 2px;
   }
-  .masthead-kicker {
-    font-size: 12px;
+  .masthead-kicker,
+  .edition {
+    display: none;
   }
   .brand-logo {
-    margin: 10px auto 13px;
+    margin: 4px auto 12px;
   }
-  .edition {
-    font-size: 11px;
-  }
+  /* Secciones en una sola fila que se desliza con el dedo y se queda fija arriba, como en las apps de prensa. */
   .nav {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    margin: 0 calc(-1 * var(--gutter));
+    padding: 0 var(--gutter);
+    background: var(--paper);
+    border-top: 1px solid var(--ink);
+    border-bottom: 1px solid var(--line);
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    gap: 22px;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    scroll-padding-inline: var(--gutter);
+    scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(to right, #000 82%, transparent);
+    mask-image: linear-gradient(to right, #000 82%, transparent);
+    &::-webkit-scrollbar {
+      display: none;
+    }
     a {
-      padding: 13px 8px;
-      text-align: center;
-      border-bottom: 1px solid var(--line);
-      font-size: 11px;
-      border-right: 1px solid var(--line);
-      &:nth-child(odd) {
-        border-left: 1px solid var(--line);
+      flex: none;
+      padding: 14px 0 11px;
+      border: 0;
+      border-bottom: 2px solid transparent;
+      font-size: 11.5px;
+      scroll-snap-align: start;
+      &:first-child {
+        border-left: 0;
       }
-      &:last-child:nth-child(odd) {
-        grid-column: 1 / -1;
+      &:last-child {
+        margin-right: 40px;
+      }
+      &:hover,
+      &.active {
+        background: none;
+        border-bottom-color: var(--burgundy);
       }
     }
   }
   main {
-    padding-top: 21px;
+    padding-top: 22px;
   }
   .site-footer {
     flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 10px;
+    nav {
+      justify-content: center;
+    }
   }
   .prose {
     font-size: 18px;

@@ -49,12 +49,59 @@ import { FechaPipe } from '../../core/util/fecha.pipe';
       color: #45443f;
       margin: 0 0 14px;
     }
+    /* Sin imagen en escritorio (p. ej. la fila bajo el destacado), pero sí en móvil. */
+    .thumb.mobile-only {
+      display: none;
+    }
+    /* Móvil: titular a la izquierda y miniatura cuadrada a la derecha, como en las apps de prensa. */
+    @media (max-width: 620px) {
+      .story.has-thumb {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 104px;
+        grid-template-areas:
+          'cat thumb'
+          'title thumb'
+          'dek dek'
+          'meta meta';
+        column-gap: 14px;
+        align-items: start;
+      }
+      .story.has-thumb .thumb {
+        display: block;
+        grid-area: thumb;
+        aspect-ratio: 1;
+        margin: 2px 0 12px;
+      }
+      .story.has-thumb .category {
+        grid-area: cat;
+      }
+      .story.has-thumb h3 {
+        grid-area: title;
+      }
+      .story.has-thumb p {
+        grid-area: dek;
+      }
+      .story.has-thumb .story-meta {
+        grid-area: meta;
+      }
+      h3 {
+        font-size: 22px;
+        line-height: 1.1;
+        margin: 6px 0 10px;
+      }
+    }
   `,
   template: `
     @let a = article();
-    <article class="story">
-      @if (a.imageUrl && showImage()) {
-        <a class="thumb" [routerLink]="['/articulo', a.slug]" tabindex="-1" aria-hidden="true">
+    <article class="story" [class.has-thumb]="!!a.imageUrl">
+      @if (a.imageUrl) {
+        <a
+          class="thumb"
+          [class.mobile-only]="!showImage()"
+          [routerLink]="['/articulo', a.slug]"
+          tabindex="-1"
+          aria-hidden="true"
+        >
           <img [src]="a.imageUrl" [attr.width]="a.imageWidth" [attr.height]="a.imageHeight" alt="" loading="lazy" decoding="async" />
         </a>
       }
