@@ -11,8 +11,9 @@ const META: Record<LegalKind, { title: string; path: string }> = {
 };
 
 /**
- * Textos legales (LSSI-CE, RGPD/LOPDGDD). OJO: los datos entre corchetes hay que rellenarlos antes
- * de publicar, y conviene que un profesional revise el texto final.
+ * Textos legales (LSSI-CE, RGPD/LOPDGDD). Proyecto sin ánimo de lucro y sin personalidad jurídica: no se
+ * publican NIF ni domicilio. Si algún día hay ingresos (anuncios, donaciones, suscripciones), habrá que
+ * añadir los datos del titular (lo ideal: una asociación con su propio NIF). Conviene que lo revise un profesional.
  */
 @Component({
   selector: 'app-legal-page',
