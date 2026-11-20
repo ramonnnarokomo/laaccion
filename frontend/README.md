@@ -57,13 +57,13 @@ src/server.ts  servidor Express (proxy, SSR, sitemap, RSS, cabeceras)
 ## Despliegue en Railway
 
 Servicio nuevo con directorio raíz `frontend/` (usa el `Dockerfile`), healthcheck en `/healthz` y el
-dominio público (`laaccion.com`) apuntando a **este** servicio. El backend se queda sin dominio
+dominio público (`www.laaccion.com`) apuntando a **este** servicio. El backend se queda sin dominio
 público: solo se habla con él por la red privada.
 
 | Variable | Valor |
 |---|---|
 | `API_URL` | `http://${{backend.RAILWAY_PRIVATE_DOMAIN}}:8080` (nombre de tu servicio del back) |
-| `SITE_URL` | `https://laaccion.com` |
+| `SITE_URL` | `https://www.laaccion.com` (IONOS no admite apuntar `laaccion.com` sin www a Railway: ese se redirige a www desde IONOS) |
 | `NG_ALLOWED_HOSTS` | Dominios extra que no estén ya en `angular.json` (separados por comas) |
 | `TRUST_PROXY_HOPS` | `1` (el proxy de Railway). `2` si además pones Cloudflare delante |
 | `TURNSTILE_SITE_KEY` | Site key **pública** de Turnstile (la secreta va en el back) |

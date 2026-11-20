@@ -15,7 +15,8 @@ import { join } from 'node:path';
  * Variables de entorno:
  *  PORT              puerto (Railway lo pone solo)
  *  API_URL           URL interna del backend, p. ej. http://backend.railway.internal:8080
- *  SITE_URL          URL pública canónica, p. ej. https://laaccion.com
+ *  SITE_URL          URL pública canónica: https://www.laaccion.com (IONOS no permite apuntar el dominio
+ *                    sin www a Railway; laaccion.com redirige a www desde el panel de IONOS)
  *  NG_ALLOWED_HOSTS  hosts admitidos, separados por comas (además de los de angular.json)
  *  TRUST_PROXY_HOPS  nº de proxies delante (Railway: 1). Necesario para la IP real del lector.
  *  TURNSTILE_SITE_KEY site key pública de Cloudflare Turnstile (la secreta va en el back)
@@ -24,7 +25,7 @@ import { join } from 'node:path';
 
 const env = process.env;
 const API_URL = (env['API_URL'] || 'http://localhost:8080').replace(/\/+$/, '');
-const SITE_URL = (env['SITE_URL'] || 'https://laaccion.com').replace(/\/+$/, '');
+const SITE_URL = (env['SITE_URL'] || 'https://www.laaccion.com').replace(/\/+$/, '');
 const TRUST_PROXY_HOPS = Number.parseInt(env['TRUST_PROXY_HOPS'] ?? '1', 10);
 const IS_PROD = env['NODE_ENV'] === 'production';
 const CLIENT_IP_HEADER = (env['CLIENT_IP_HEADER'] ?? '').trim().toLowerCase();
@@ -140,11 +141,12 @@ app.get('/healthz', (_req, res) => {
   res.json({ status: 'ok' });
 });
 
-// En producción: todo a https y a un único dominio (www.laaccion.com → laaccion.com), mejor para SEO.
+// En producción: todo a https y a un único dominio (el de SITE_URL, con o sin www), mejor para SEO.
+const BARE_HOST = SITE_HOST.replace(/^www\./, '');
 app.use((req, res, next) => {
   if (!IS_PROD) return next();
   const host = req.get('host') ?? '';
-  const wrongHost = host === `www.${SITE_HOST}`;
+  const wrongHost = host !== SITE_HOST && (host === BARE_HOST || host === `www.${BARE_HOST}`);
   if (wrongHost || (req.protocol === 'http' && host === SITE_HOST)) {
     return res.redirect(301, SITE_URL + req.originalUrl);
   }
