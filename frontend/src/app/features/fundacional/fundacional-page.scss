@@ -121,6 +121,11 @@ p {
     }
   }
 }
+/* Autoría del texto, con el mismo estilo gris que la firma de los artículos. */
+.author {
+  margin: 22px 0 0;
+  text-align: center;
+}
 .closing {
   margin-top: 34px;
   padding: 30px 26px;
