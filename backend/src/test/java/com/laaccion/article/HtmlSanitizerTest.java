@@ -45,6 +45,17 @@ class HtmlSanitizerTest {
     }
 
     @Test
+    void soloAdmiteImagenesDelPropioSitio() {
+        String html = sanitizer.sanitize("<p><img src=\"/media/2026/11/foto.webp\" alt=\"propia\"></p>"
+                + "<p><img src=\"https://www.laaccion.test/media/otra.webp\" alt=\"absoluta\"></p>"
+                + "<p><img src=\"https://rastreador.example/pixel.gif\" alt=\"externa\"></p>"
+                + "<p><img src=\"//rastreador.example/pixel.gif\" alt=\"sin-esquema\"></p>");
+
+        assertThat(html).contains("/media/2026/11/foto.webp").contains("https://www.laaccion.test/media/otra.webp");
+        assertThat(html).doesNotContain("rastreador.example");
+    }
+
+    @Test
     void calculaLosMinutosDeLectura() {
         assertThat(sanitizer.readingMinutes("")).isEqualTo(1);
         assertThat(sanitizer.readingMinutes("<p>" + "palabra ".repeat(220) + "</p>")).isEqualTo(1);

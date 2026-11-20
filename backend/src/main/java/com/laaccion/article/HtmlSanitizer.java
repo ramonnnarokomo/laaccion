@@ -61,6 +61,13 @@ public class HtmlSanitizer {
                 iframe.remove();
             }
         }
+        // Solo imágenes propias: una imagen enlazada desde otra web le pasaría a ese tercero la IP
+        // de cada lector, y la política de privacidad promete que no usamos servicios de terceros.
+        for (Element img : document.select("img")) {
+            if (!isOwnImage(img.attr("src"))) {
+                img.remove();
+            }
+        }
         return document.body().html();
     }
 
@@ -72,6 +79,35 @@ public class HtmlSanitizer {
         }
         int words = text.split("\\s+").length;
         return Math.max(1, (int) Math.ceil(words / (double) WORDS_PER_MINUTE));
+    }
+
+    /** Ruta relativa del propio sitio (/media/...) o URL absoluta del dominio público, con o sin www. */
+    private boolean isOwnImage(String src) {
+        String value = src == null ? "" : src.trim();
+        if (value.startsWith("/") && !value.startsWith("//")) {
+            return true;
+        }
+        String host = hostOf(value);
+        String own = hostOf(baseUri);
+        return host != null && own != null && bareHost(host).equals(bareHost(own));
+    }
+
+    private static String hostOf(String url) {
+        try {
+            URI uri = URI.create(url == null ? "" : url.trim());
+            String scheme = uri.getScheme();
+            if (uri.getHost() == null || scheme == null
+                    || !(scheme.equalsIgnoreCase("https") || scheme.equalsIgnoreCase("http"))) {
+                return null;
+            }
+            return uri.getHost().toLowerCase(Locale.ROOT);
+        } catch (IllegalArgumentException ex) {
+            return null;
+        }
+    }
+
+    private static String bareHost(String host) {
+        return host.startsWith("www.") ? host.substring(4) : host;
     }
 
     private static boolean isAllowedEmbed(String src) {

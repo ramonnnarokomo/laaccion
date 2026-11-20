@@ -54,6 +54,8 @@
 
       <div class="prose" appEmbedFacades [innerHTML]="a.contentHtml | articleHtml"></div>
 
+      <p class="signature">{{ a.author }}</p>
+
       <footer class="article-foot">
         @if (a.tags.length) {
           <ul class="tags" aria-label="Etiquetas">

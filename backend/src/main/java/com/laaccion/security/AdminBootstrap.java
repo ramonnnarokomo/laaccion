@@ -22,8 +22,8 @@ import org.springframework.util.StringUtils;
 public class AdminBootstrap implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(AdminBootstrap.class);
-    private static final int MIN_PASSWORD_LENGTH = 5;
-    private static final int MAX_PASSWORD_LENGTH = 50;
+    private static final int MIN_PASSWORD_LENGTH = 12;
+    private static final int MAX_PASSWORD_LENGTH = 72;
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;

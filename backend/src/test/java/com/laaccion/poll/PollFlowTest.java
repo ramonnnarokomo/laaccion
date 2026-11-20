@@ -13,6 +13,7 @@ import com.laaccion.user.Role;
 import com.laaccion.user.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -27,6 +28,9 @@ class PollFlowTest extends IntegrationTestBase {
               "options": ["Sí", "No", "No lo sé"]
             }
             """;
+
+    @Autowired
+    private PollService pollService;
 
     private User admin;
 
@@ -97,6 +101,27 @@ class PollFlowTest extends IntegrationTestBase {
                 .andExpect(jsonPath("$.totalVotes").value(2));
         assertThat(jdbc.queryForObject("select count(*) from poll_vote", Long.class)).isZero();
         mvc.perform(vote(pollId, firstOption, "192.0.2.44")).andExpect(status().isConflict());
+    }
+
+    @Test
+    void alVencerLaFechaDeCierreSeCierraYSeBorranLosHashes() throws Exception {
+        MvcResult created = createPoll();
+        Long pollId = idOf(created);
+        Number option = JsonPath.read(created.getResponse().getContentAsString(), "$.options[0].id");
+        mvc.perform(post("/api/v1/admin/polls/" + pollId + "/open").with(loggedAs(admin)).with(csrf()))
+                .andExpect(status().isOk());
+        mvc.perform(vote(pollId, option, "203.0.113.7")).andExpect(status().isOk());
+
+        jdbc.update("update poll set closes_at = now() - interval '1 minute' where id = ?", pollId);
+
+        assertThat(pollService.closeExpired()).isEqualTo(1);
+        assertThat(jdbc.queryForObject("select status from poll where id = ?", String.class, pollId))
+                .isEqualTo("CLOSED");
+        assertThat(jdbc.queryForObject("select count(*) from poll_vote", Long.class)).isZero();
+        // El recuento se conserva y una segunda pasada no vuelve a tocar nada.
+        assertThat(jdbc.queryForObject("select sum(votes_count) from poll_option where poll_id = ?", Long.class,
+                pollId)).isEqualTo(1);
+        assertThat(pollService.closeExpired()).isZero();
     }
 
     @Test

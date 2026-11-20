@@ -186,6 +186,29 @@ public class PollService {
         return PollResponse.from(find(id), clock.instant());
     }
 
+    /**
+     * Cierra en base de datos las encuestas que han llegado a su fecha de cierre y borra sus hashes
+     * de control de duplicados, igual que un cierre manual. Lo llama {@link PollExpiryJob}.
+     *
+     * @return número de encuestas cerradas
+     */
+    @Transactional
+    public int closeExpired() {
+        List<Poll> expired = pollRepository.findByStatusAndClosesAtLessThanEqual(PollStatus.OPEN, clock.instant());
+        if (expired.isEmpty()) {
+            return 0;
+        }
+        // Primero todos los cambios de estado: purgeVoters vacía la caché de JPA y dejaría
+        // desconectadas las entidades que quedaran por cerrar.
+        expired.forEach(poll -> poll.setStatus(PollStatus.CLOSED));
+        pollRepository.flush();
+        for (Poll poll : expired) {
+            optionRepository.purgeVoters(poll.getId());
+            auditService.record("POLL_CLOSED", "poll", poll.getId(), poll.getQuestion() + " (cierre automático)");
+        }
+        return expired.size();
+    }
+
     @Transactional
     public void delete(Long id) {
         Poll poll = find(id);
