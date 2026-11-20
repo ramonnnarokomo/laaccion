@@ -1,0 +1,116 @@
+<section class="intro page-head">
+  <div>
+    <div class="eyebrow">La comunidad · Convocatorias y encuentros</div>
+    <h1>El <em>Tablón</em></h1>
+    <p class="lead">Un lugar para encontrarse, anunciar, convocar y poner ideas en circulación.</p>
+  </div>
+  <aside class="intro-note">
+    <strong>Un espacio abierto</strong>
+    Como el tablón de una facultad, aquí conviven carteles, invitaciones, lecturas y propuestas. Los anuncios vigentes quedan
+    por delante; los que ya han pasado permanecen al fondo como capas de papel.
+  </aside>
+</section>
+
+@switch (state().status) {
+  @case ('loading') {
+    <span class="skeleton" style="height: 600px" aria-busy="true"></span>
+  }
+  @case ('error') {
+    <div class="state state--error" role="alert"><p>No hemos podido cargar el tablón. Inténtalo más tarde.</p></div>
+  }
+  @case ('not-found') {
+    <div class="state state--error" role="alert"><p>No hemos podido cargar el tablón.</p></div>
+  }
+}
+
+@if (state(); as s) {
+  @if (s.status === 'ok') {
+    @let board = flyers(s.data.active, s.data.expired);
+    <div class="board-heading">
+      <h2>Convocatorias fijadas</h2>
+      <span>{{ board.active.length }} activos · {{ board.expired.length }} pasados</span>
+    </div>
+
+    <section class="board-frame" aria-label="Tablón de anuncios">
+      <div class="board-topline">
+        <span>Cartelera pública</span>
+        <span>{{ formatFecha(s.data.today, 'dia') }}</span>
+      </div>
+      @if (!board.active.length && !board.expired.length) {
+        <p class="board-empty">El tablón está vacío por ahora. Pronto habrá convocatorias.</p>
+      } @else {
+        <div class="board-canvas" [style.--canvas-h.px]="board.height">
+          <div class="flyer-layer expired-layer" role="list" aria-label="Anuncios pasados">
+            @for (f of board.expired; track f.item.id) {
+              <ng-container *ngTemplateOutlet="flyer; context: { $implicit: f }" />
+            }
+          </div>
+          <div class="flyer-layer active-layer" role="list" aria-label="Anuncios vigentes">
+            @for (f of board.active; track f.item.id) {
+              <ng-container *ngTemplateOutlet="flyer; context: { $implicit: f }" />
+            }
+          </div>
+        </div>
+      }
+      <div class="board-status">
+        <span>Activos: {{ board.active.length }} / 10</span>
+        <span>Pasados: {{ board.expired.length }} / 25 · En segundo plano</span>
+      </div>
+    </section>
+    <div class="board-caption">
+      <span>Los anuncios pasan al fondo después de su fecha de evento</span>
+      <span>La cultura también se organiza desde abajo</span>
+    </div>
+  }
+}
+
+<ng-template #flyer let-f>
+  <div role="listitem" class="flyer-slot" [style.left]="f.left" [style.top]="f.top" [style.z-index]="f.z">
+    @if (f.url) {
+      <a
+        class="flyer is-link"
+        [class]="'tone-' + f.item.tone.toLowerCase()"
+        [class.expired]="f.expired"
+        [style.--tilt]="f.tilt"
+        [href]="f.url"
+        target="_blank"
+        rel="noopener noreferrer"
+        [attr.aria-label]="f.label"
+      >
+        <ng-container *ngTemplateOutlet="flyerBody; context: { $implicit: f.item }" />
+      </a>
+    } @else {
+      <article class="flyer" [class]="'tone-' + f.item.tone.toLowerCase()" [class.expired]="f.expired" [style.--tilt]="f.tilt" tabindex="0" [attr.aria-label]="f.label">
+        <ng-container *ngTemplateOutlet="flyerBody; context: { $implicit: f.item }" />
+      </article>
+    }
+  </div>
+</ng-template>
+
+<ng-template #flyerBody let-item>
+  <small>{{ item.section }}</small>
+  <h3>{{ item.title }}</h3>
+  <p>{{ item.description }}</p>
+  @if (item.details) {
+    <div class="details">{{ item.details }}</div>
+  }
+  @if (item.stamp) {
+    <span class="stamp">{{ item.stamp }}</span>
+  }
+</ng-template>
+
+<section class="below">
+  <article class="info">
+    <div class="eyebrow">Cómo funciona</div>
+    <h2>Una cartelera en movimiento</h2>
+    <p>
+      Cada anuncio tiene la fecha de su evento. Cuando esa fecha pasa, el cartel se va al fondo del tablón sin que nadie tenga que
+      moverlo. Se muestran como máximo <strong class="accent">10 anuncios activos y 25 pasados</strong>.
+    </p>
+  </article>
+  <article class="info">
+    <div class="eyebrow">Participa</div>
+    <h2>¿Organizas algo?</h2>
+    <p>Si quieres anunciar una actividad, un encuentro o una lectura, <a class="accent" routerLink="/aviso-legal" fragment="contacto">escríbenos</a> y la redacción la fijará en el tablón.</p>
+  </article>
+</section>

@@ -1,0 +1,88 @@
+@switch (state().status) {
+  @case ('loading') {
+    <div class="article" aria-busy="true">
+      <span class="skeleton" style="height: 14px; width: 30%; margin: 0 auto 20px"></span>
+      <span class="skeleton" style="height: 120px; margin-bottom: 20px"></span>
+      <span class="skeleton" style="height: 400px"></span>
+    </div>
+  }
+  @case ('not-found') {
+    <div class="state">
+      <p>Este artículo no existe o ya no está publicado.</p>
+      <a class="read-link" routerLink="/">Volver a la portada</a>
+    </div>
+  }
+  @case ('error') {
+    <div class="state state--error" role="alert">
+      <p>No hemos podido cargar el artículo. Inténtalo de nuevo en unos segundos.</p>
+    </div>
+  }
+}
+
+@if (state(); as s) {
+  @if (s.status === 'ok') {
+    @let a = s.data;
+    <article class="article">
+      <header class="article-head">
+        <a class="section-label" [routerLink]="['/seccion', a.category.slug]">{{ a.category.name }}</a>
+        <h1>{{ a.title }}</h1>
+        @if (a.dek) {
+          <p class="dek">{{ a.dek }}</p>
+        }
+        <div class="byline">
+          Por <span>{{ a.author }}</span> ·
+          <time [attr.datetime]="a.publishedAt">{{ a.publishedAt | fecha }}</time> ·
+          {{ a.readingMinutes }} min de lectura
+        </div>
+      </header>
+
+      @if (a.imageUrl) {
+        <figure class="hero">
+          <img
+            [src]="a.imageUrl"
+            [attr.width]="a.imageWidth"
+            [attr.height]="a.imageHeight"
+            [alt]="a.imageAlt || ''"
+            fetchpriority="high"
+            decoding="async"
+          />
+          @if (a.imageAlt) {
+            <figcaption>{{ a.imageAlt }}</figcaption>
+          }
+        </figure>
+      }
+
+      <div class="prose" appEmbedFacades [innerHTML]="a.contentHtml | articleHtml"></div>
+
+      <footer class="article-foot">
+        @if (a.tags.length) {
+          <ul class="tags" aria-label="Etiquetas">
+            @for (t of a.tags; track t.slug) {
+              <li><a [routerLink]="['/etiqueta', t.slug]">#{{ t.name }}</a></li>
+            }
+          </ul>
+        }
+        @if (a.updatedAt && a.updatedAt.slice(0, 16) !== a.publishedAt.slice(0, 16)) {
+          <p class="byline">Actualizado el <time [attr.datetime]="a.updatedAt">{{ a.updatedAt | fecha: 'hora' }}</time></p>
+        }
+        <div class="share">
+          <span class="byline">Compartir</span>
+          @for (l of shareLinks(); track l.label) {
+            <a [href]="l.href" target="_blank" rel="noopener noreferrer">{{ l.label }}</a>
+          }
+        </div>
+      </footer>
+    </article>
+
+    @if (related().length) {
+      <section class="related" aria-labelledby="rel-titulo">
+        <h2 id="rel-titulo" class="section-label">Más en {{ a.category.name }}</h2>
+        <div class="related-grid">
+          @for (r of related(); track r.slug) {
+            <app-story-card [article]="r" />
+          }
+        </div>
+      </section>
+    }
+  }
+}

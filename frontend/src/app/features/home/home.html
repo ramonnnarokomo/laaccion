@@ -1,0 +1,85 @@
+@switch (state().status) {
+  @case ('loading') {
+    <div class="lead-grid" aria-busy="true">
+      <div><span class="skeleton" style="height: 14px; width: 40%"></span><span class="skeleton" style="height: 150px; margin-top: 16px"></span></div>
+      <span class="skeleton" style="min-height: 370px"></span>
+      <div><span class="skeleton" style="height: 220px"></span></div>
+    </div>
+  }
+  @case ('error') {
+    <div class="state state--error" role="alert">
+      <p>No hemos podido cargar la portada.</p>
+      <a class="read-link" href="/">Reintentar</a>
+    </div>
+  }
+}
+
+@if (layout(); as l) {
+  @if (l.lead; as lead) {
+    <section class="lead-grid">
+      <article class="lead-copy">
+        <a class="section-label" [routerLink]="['/seccion', lead.category.slug]">{{ lead.category.name }}</a>
+        <h1><a [routerLink]="['/articulo', lead.slug]">{{ lead.title }}</a></h1>
+        @if (lead.dek) {
+          <p class="dek">{{ lead.dek }}</p>
+        }
+        <div class="byline">
+          Por {{ lead.author }} · <time [attr.datetime]="lead.publishedAt">{{ lead.publishedAt | fecha }}</time> · {{ lead.readingMinutes }} min
+        </div>
+        <p class="summary">{{ lead.summary }}</p>
+        <a class="read-link" [routerLink]="['/articulo', lead.slug]">Leer el artículo&nbsp; ↗</a>
+      </article>
+
+      <a class="feature-art" [routerLink]="['/articulo', lead.slug]" tabindex="-1" aria-hidden="true" [class.has-image]="!!lead.imageUrl">
+        @if (lead.imageUrl) {
+          <img [src]="lead.imageUrl" [attr.width]="lead.imageWidth" [attr.height]="lead.imageHeight" alt="" fetchpriority="high" decoding="async" />
+        } @else {
+          <app-sun-art class="art-sun" />
+          <div class="art-caption"><span>{{ lead.category.name }}</span><span>LA ACCIÓN</span></div>
+        }
+      </a>
+
+      <aside class="side-note">
+        @if (l.side; as side) {
+          <a class="section-label" [routerLink]="['/seccion', side.category.slug]">{{ side.category.name }}</a>
+          <h2><a [routerLink]="['/articulo', side.slug]">{{ side.title }}</a></h2>
+          <p>{{ side.dek || side.summary }}</p>
+          <a class="read-link" [routerLink]="['/articulo', side.slug]">Leer&nbsp; ↗</a>
+        }
+        <div class="small-rule"></div>
+        <div class="section-label">La comunidad</div>
+        <p>Convocatorias, encuentros y propuestas de los lectores en <em>El Tablón</em>, y la pregunta abierta de esta semana en Encuestas.</p>
+        <a class="read-link" routerLink="/tablon">Ir al Tablón&nbsp; ↗</a>
+      </aside>
+    </section>
+
+    @if (l.grid.length) {
+      <section class="content-grid" aria-label="Más artículos">
+        @for (a of l.grid; track a.slug) {
+          <app-story-card [article]="a" [showImage]="false" />
+        }
+      </section>
+    }
+  } @else {
+    <div class="state">
+      <p>Todavía no hay artículos publicados. Mientras tanto, lee nuestro texto fundacional.</p>
+      <a class="read-link" routerLink="/texto-fundacional">Texto fundacional&nbsp; ↗</a>
+    </div>
+  }
+
+  <div class="quote-band">
+    “Una sociedad mejor empieza por la calidad de las preguntas que se atreve a formular.”
+    <small>LA ACCIÓN · NOTA EDITORIAL</small>
+  </div>
+
+  @if (l.more.length) {
+    <section class="more" aria-labelledby="mas-titulo">
+      <h2 id="mas-titulo" class="section-label">Últimos artículos</h2>
+      <div class="more-grid">
+        @for (a of l.more; track a.slug) {
+          <app-story-card [article]="a" />
+        }
+      </div>
+    </section>
+  }
+}

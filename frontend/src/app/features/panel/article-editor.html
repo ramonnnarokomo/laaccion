@@ -1,0 +1,128 @@
+<header class="panel-head">
+  <div>
+    <a class="muted" routerLink="/panel/articulos">← Artículos</a>
+    <h1>{{ isNew() ? 'Nuevo artículo' : 'Editar artículo' }}</h1>
+  </div>
+  @if (article(); as a) {
+    @if (a.status === 'PUBLISHED') {
+      <a class="btn" [href]="'/articulo/' + a.slug" target="_blank" rel="noopener">Ver publicado ↗</a>
+    }
+  }
+</header>
+
+@if (loadError()) {
+  <p class="form-error" role="alert">{{ loadError() }}</p>
+} @else {
+  <form class="editor-grid" [formGroup]="form" (ngSubmit)="save()" novalidate>
+    <div class="editor-main">
+      <label class="field">
+        <span>Titular *</span>
+        <input class="input-title" formControlName="title" maxlength="200" />
+        <app-field-error [message]="err('title')" />
+      </label>
+      <label class="field">
+        <span>Entradilla <small>(subtítulo, opcional)</small></span>
+        <textarea formControlName="dek" rows="2" maxlength="300"></textarea>
+        <app-field-error [message]="err('dek')" />
+      </label>
+      <label class="field">
+        <span>Resumen * <small>(portada, buscadores y redes · {{ form.controls.summary.value.length }}/600)</small></span>
+        <textarea formControlName="summary" rows="3" maxlength="600"></textarea>
+        <app-field-error [message]="err('summary')" />
+      </label>
+
+      <div class="field">
+        <div class="field-row">
+          <span>Cuerpo *</span>
+          <button type="button" class="link-btn" (click)="preview.set(!preview())">{{ preview() ? 'Volver a editar' : 'Vista previa' }}</button>
+        </div>
+        <div [hidden]="preview()">
+          <app-rich-editor [initial]="content()" (changed)="onContent($event)" (imageRequested)="openPicker('content')" />
+        </div>
+        @if (preview()) {
+          <div class="preview prose" appEmbedFacades [innerHTML]="content() | articleHtml"></div>
+        }
+        <app-field-error [message]="err('contentHtml')" />
+      </div>
+    </div>
+
+    <aside class="editor-side">
+      <section class="card">
+        <h2>Publicación</h2>
+        <label class="field">
+          <span>Estado</span>
+          <select formControlName="status">
+            <option value="DRAFT">Borrador</option>
+            <option value="PUBLISHED">Publicado</option>
+            <option value="SCHEDULED">Programado</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Fecha de publicación <small>(vacía = ahora; futura = programar)</small></span>
+          <input type="datetime-local" formControlName="publishedAt" />
+          <app-field-error [message]="err('publishedAt')" />
+        </label>
+        <label class="check"><input type="checkbox" formControlName="featured" /> Destacado en portada</label>
+        @if (error()) {
+          <p class="form-error" role="alert">{{ error() }}</p>
+        }
+        @if (saved()) {
+          <p class="form-ok" role="status">{{ saved() }}</p>
+        }
+        <button class="btn btn--primary btn--block" type="submit" [disabled]="saving()">{{ saving() ? 'Guardando…' : 'Guardar' }}</button>
+        @if (form.controls.status.value !== 'DRAFT') {
+          <button class="btn btn--block" type="button" [disabled]="saving()" (click)="save('DRAFT')">Pasar a borrador</button>
+        }
+      </section>
+
+      <section class="card">
+        <h2>Clasificación</h2>
+        <label class="field">
+          <span>Sección *</span>
+          <select formControlName="categoryId">
+            <option [ngValue]="0" disabled>Elige una sección</option>
+            @for (c of categories(); track c.id) {
+              <option [ngValue]="c.id">{{ c.name }}</option>
+            }
+          </select>
+          <app-field-error [message]="err('categoryId')" />
+        </label>
+        <label class="field">
+          <span>Etiquetas <small>(separadas por comas · {{ tagCount() }}/10)</small></span>
+          <input formControlName="tags" placeholder="educación, democracia" />
+          <app-field-error [message]="err('tags')" />
+        </label>
+        <label class="field">
+          <span>Firma <small>(si no, tu nombre)</small></span>
+          <input formControlName="byline" maxlength="120" />
+          <app-field-error [message]="err('byline')" />
+        </label>
+        <label class="field">
+          <span>Dirección (slug) <small>(vacía = a partir del titular)</small></span>
+          <input formControlName="slug" maxlength="160" placeholder="mi-articulo" />
+          <app-field-error [message]="err('slug')" />
+        </label>
+      </section>
+
+      <section class="card">
+        <h2>Imagen principal</h2>
+        @if (form.controls.featuredImageUrl.value) {
+          <img class="featured-preview" [src]="form.controls.featuredImageUrl.value" alt="" />
+          <label class="field">
+            <span>Texto alternativo *</span>
+            <input formControlName="featuredImageAlt" maxlength="250" placeholder="Describe lo que se ve" />
+            <app-field-error [message]="err('featuredImageAlt')" />
+          </label>
+          <div class="row">
+            <button class="btn" type="button" (click)="openPicker('featured')">Cambiar</button>
+            <button class="link-btn danger" type="button" (click)="removeFeatured()">Quitar</button>
+          </div>
+        } @else {
+          <button class="btn btn--block" type="button" (click)="openPicker('featured')">Elegir imagen</button>
+        }
+      </section>
+    </aside>
+  </form>
+}
+
+<app-image-picker [open]="picker() !== null" (picked)="onPicked($event)" (closed)="picker.set(null)" />

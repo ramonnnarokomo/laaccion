@@ -1,0 +1,27 @@
+# Perfil de los tests de integración. La base de datos la pone Testcontainers.
+server:
+  servlet:
+    session:
+      cookie:
+        secure: false
+
+app:
+  public-base-url: https://laaccion.test
+  cors:
+    allowed-origins: https://laaccion.test
+  security:
+    secure-cookies: false
+    ip-hash-secret: test-secret-test-secret-test-secret-0123
+    max-login-attempts: 3
+  rate-limit:
+    login-per-minute: 1000
+    vote-per-minute: 1000
+    upload-per-minute: 1000
+  captcha:
+    enabled: false
+    turnstile-secret: ""
+  storage:
+    type: local
+    local:
+      directory: target/test-uploads
+      public-base-url: http://localhost/media

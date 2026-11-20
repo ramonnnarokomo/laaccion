@@ -1,0 +1,30 @@
+# Secretos y configuración local
+.env
+.env.*
+!.env.example
+
+# Java / Maven
+target/
+*.class
+*.log
+
+# Subidas locales (solo desarrollo)
+backend/uploads/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+.factorypath
+
+# Node / Angular (frontend, cuando llegue)
+node_modules/
+dist/
+.angular/
+
+# SO
+.DS_Store
+Thumbs.db

@@ -1,0 +1,96 @@
+# Configuración base = valores seguros (los de producción).
+# El perfil dev los relaja; no hay perfil por defecto: sin SPRING_PROFILES_ACTIVE la app no arranca.
+spring:
+  application:
+    name: laaccion-backend
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate   # el esquema lo gestiona Flyway; Hibernate solo comprueba que cuadra
+    properties:
+      hibernate.jdbc.time_zone: UTC
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
+
+server:
+  port: ${PORT:8080}
+  forward-headers-strategy: native
+  tomcat:
+    max-swallow-size: 6MB
+  error:
+    include-stacktrace: never
+    include-message: never
+    include-binding-errors: never
+  servlet:
+    session:
+      timeout: 8h
+      tracking-modes: cookie
+      cookie:
+        name: LAACCION_SESSION
+        http-only: true
+        secure: true
+        same-site: lax
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+app:
+  # URL pública del sitio (front). Se usa como base al sanear enlaces del editor.
+  public-base-url: ${APP_PUBLIC_BASE_URL}
+  cors:
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS}
+  security:
+    secure-cookies: true
+    # Opcional: dominio de la cookie XSRF-TOKEN si front y API van en subdominios distintos (p. ej. laaccion.com).
+    cookie-domain: ${APP_COOKIE_DOMAIN:}
+    # Cabecera de la que sacar la IP real del cliente (CF-Connecting-IP con Cloudflare delante). Vacío = IP de la conexión.
+    client-ip-header: ${APP_CLIENT_IP_HEADER:}
+    # Secreto para el hash de IP del control de voto duplicado. Mínimo 32 caracteres.
+    ip-hash-secret: ${APP_IP_HASH_SECRET}
+    content-security-policy: "default-src 'none'; frame-ancestors 'none'"
+    max-login-attempts: 5
+    lock-minutes: 15
+  rate-limit:
+    login-per-minute: 10
+    vote-per-minute: 10
+    upload-per-minute: 20
+  captcha:
+    enabled: true
+    turnstile-secret: ${TURNSTILE_SECRET_KEY}
+  storage:
+    type: ${APP_STORAGE_TYPE:s3}
+    local:
+      directory: uploads
+      public-base-url: http://localhost:8080/media
+    s3:
+      endpoint: ${S3_ENDPOINT:}
+      region: ${S3_REGION:auto}
+      bucket: ${S3_BUCKET:}
+      access-key: ${S3_ACCESS_KEY:}
+      secret-key: ${S3_SECRET_KEY:}
+      public-base-url: ${S3_PUBLIC_BASE_URL:}
+  images:
+    max-size-bytes: 5242880
+    max-dimension: 8000
+  board:
+    max-active: 10
+    max-expired: 25
+    zone: Europe/Madrid
+  bootstrap-admin:
+    email: ${APP_BOOTSTRAP_ADMIN_EMAIL:}
+    password: ${APP_BOOTSTRAP_ADMIN_PASSWORD:}
+    display-name: ${APP_BOOTSTRAP_ADMIN_NAME:Redacción}

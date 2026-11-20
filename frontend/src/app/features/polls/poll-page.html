@@ -1,0 +1,76 @@
+@switch (state().status) {
+  @case ('loading') {
+    <span class="skeleton" style="height: 420px; max-width: 760px; margin: 0 auto" aria-busy="true"></span>
+  }
+  @case ('not-found') {
+    <div class="state">
+      <p>Esta encuesta no existe.</p>
+      <a class="read-link" routerLink="/encuestas">Ver todas las encuestas</a>
+    </div>
+  }
+  @case ('error') {
+    <div class="state state--error" role="alert"><p>No hemos podido cargar la encuesta. Inténtalo más tarde.</p></div>
+  }
+}
+
+@if (poll(); as p) {
+  <article class="poll">
+    <a class="eyebrow" routerLink="/encuestas">← Encuestas</a>
+    <span class="badge">{{ p.status === 'OPEN' ? 'Abierta' : 'Cerrada' }}</span>
+    <h1>{{ p.question }}</h1>
+    @if (p.description) {
+      <p class="poll-description">{{ p.description }}</p>
+    }
+    @if (p.videoUrl) {
+      <app-video-facade [url]="p.videoUrl" [title]="p.question" />
+    }
+
+    @if (showResults()) {
+      <ol class="results" aria-label="Resultados">
+        @for (o of p.options; track o.id) {
+          <li>
+            <div class="result-label">
+              <span>{{ o.label }}</span>
+              <strong>{{ o.percentage.toFixed(1).replace('.', ',') }} %</strong>
+            </div>
+            <div class="bar" aria-hidden="true"><span [style.width.%]="o.percentage"></span></div>
+            <span class="byline">{{ o.votes }} {{ o.votes === 1 ? 'voto' : 'votos' }}</span>
+          </li>
+        }
+      </ol>
+      <p class="byline">Total: {{ p.totalVotes }} {{ p.totalVotes === 1 ? 'voto' : 'votos' }}</p>
+    }
+
+    @if (p.status === 'OPEN' && !voted()) {
+      <form class="vote" (submit)="$event.preventDefault(); vote()">
+        <fieldset [disabled]="sending()">
+          <legend class="visually-hidden">{{ p.question }}</legend>
+          @for (o of p.options; track o.id) {
+            <label class="option" [class.checked]="selected() === o.id">
+              <input type="radio" name="option" [value]="o.id" [checked]="selected() === o.id" (change)="selected.set(o.id)" />
+              <span>{{ o.label }}</span>
+            </label>
+          }
+        </fieldset>
+        <div #captcha class="captcha"></div>
+        <div class="vote-actions">
+          <button class="btn btn--primary" type="submit" [disabled]="selected() === null || sending()">
+            {{ sending() ? 'Enviando…' : 'Votar' }}
+          </button>
+          @if (!showResults()) {
+            <button class="read-link" type="button" (click)="revealed.set(true)">Ver resultados sin votar</button>
+          }
+        </div>
+        <p class="byline">Un voto por persona. Para evitar duplicados guardamos una huella cifrada e irreversible de tu conexión, nunca tu IP.</p>
+      </form>
+    }
+
+    @if (message(); as m) {
+      <p class="message" [class.message--error]="m.kind === 'error'" role="status">{{ m.text }}</p>
+    }
+
+    @if (p.closesAt) {
+      <p class="byline">{{ p.status === 'OPEN' ? 'Cierra el' : 'Cerró el' }} {{ p.closesAt | fecha: 'hora' }}</p>
+    }
+  </article>
+}
