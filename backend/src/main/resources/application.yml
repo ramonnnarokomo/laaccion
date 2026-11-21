@@ -71,6 +71,17 @@ app:
   captcha:
     enabled: true
     turnstile-secret: ${TURNSTILE_SECRET_KEY}
+  # Asistente de redacción del panel. Sin clave (APP_AI_API_KEY vacía) el asistente no aparece.
+  ai:
+    # anthropic (Claude) u openai (cualquier API compatible con OpenAI: Gemini, Groq, Mistral...).
+    provider: ${APP_AI_PROVIDER:anthropic}
+    api-key: ${APP_AI_API_KEY:}
+    model: ${APP_AI_MODEL:claude-haiku-5-5}
+    # Solo para provider=openai, p. ej. https://generativelanguage.googleapis.com/v1beta/openai
+    base-url: ${APP_AI_BASE_URL:}
+    max-input-chars: 60000
+    per-user-per-minute: 6
+    per-user-per-day: 60
   storage:
     type: ${APP_STORAGE_TYPE:s3}
     local:

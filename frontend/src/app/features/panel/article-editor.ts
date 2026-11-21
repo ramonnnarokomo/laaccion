@@ -1,12 +1,15 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal, viewChild } from '@angular/core';
+import {
+  ChangeDetectionStrategy, Component, DOCUMENT, DestroyRef, ElementRef, computed, inject, signal, viewChild,
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AdminService } from '../../core/api/admin.service';
-import { ArticleAdmin, ArticleRequest, ArticleStatus, Category, ImageInfo } from '../../core/api/models';
+import { AiField, ArticleAdmin, ArticleRequest, ArticleStatus, Category, ImageInfo } from '../../core/api/models';
 import { fieldErrors, errorMessage } from '../../core/util/load-state';
 import { ArticleHtmlPipe } from '../../shared/ui/safe-html.pipe';
 import { EmbedFacades } from '../../shared/ui/article-html';
+import { AiAssist } from './shared/ai-assist';
 import { FieldError } from './shared/field-error';
 import { ImagePicker } from './shared/image-picker';
 import { SLUG_PATTERN, fromLocalInput, parseTags, toLocalInput } from './shared/panel-util';
@@ -16,15 +19,20 @@ type PickerTarget = 'featured' | 'content' | null;
 
 @Component({
   selector: 'app-article-editor',
-  imports: [ReactiveFormsModule, RouterLink, RichEditor, ImagePicker, FieldError, ArticleHtmlPipe, EmbedFacades],
+  imports: [ReactiveFormsModule, RouterLink, RichEditor, ImagePicker, FieldError, ArticleHtmlPipe, EmbedFacades, AiAssist],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './article-editor.html',
+  host: { '(document:keydown.escape)': 'onEscape($event)' },
 })
 export class ArticleEditor {
   private readonly admin = inject(AdminService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly editorRef = viewChild(RichEditor);
+  private readonly document = inject(DOCUMENT);
+  private readonly bodyField = viewChild<ElementRef<HTMLElement>>('bodyField');
+  /** Deja de seguir el tamaño visible de la pantalla (lo usa el modo ampliado). */
+  private stopViewport: (() => void) | null = null;
 
   protected readonly id = signal<number | null>(null);
   protected readonly article = signal<ArticleAdmin | null>(null);
@@ -33,6 +41,11 @@ export class ArticleEditor {
   protected readonly categories = toSignal(this.admin.categories(), { initialValue: [] as Category[] });
   protected readonly picker = signal<PickerTarget>(null);
   protected readonly preview = signal(false);
+  /** Editor del cuerpo a pantalla completa. */
+  protected readonly expanded = signal(false);
+  /** Asistente de redacción: si está disponible y sobre qué campo está abierto. */
+  protected readonly aiEnabled = signal(false);
+  protected readonly assistant = signal<AiField | null>(null);
   protected readonly saving = signal(false);
   protected readonly loadError = signal<string | null>(null);
   protected readonly error = signal<string | null>(null);
@@ -60,6 +73,8 @@ export class ArticleEditor {
   protected readonly tagCount = computed(() => parseTags(this.formValue().tags ?? '').length);
 
   constructor() {
+    inject(DestroyRef).onDestroy(() => this.setExpanded(false));
+    this.admin.aiStatus().subscribe({ next: (s) => this.aiEnabled.set(s.enabled), error: () => undefined });
     const notice = this.router.currentNavigation()?.extras.state?.['saved'];
     if (typeof notice === 'string') this.saved.set(notice);
     const raw = this.route.snapshot.paramMap.get('id');
@@ -76,6 +91,81 @@ export class ArticleEditor {
   /** Para el guard de cambios sin guardar. */
   isDirty(): boolean {
     return !this.saving() && (this.form.dirty || this.contentDirty());
+  }
+
+  /**
+   * Para el guard: el botón «atrás» del móvil cierra primero lo que esté abierto (asistente, selector de
+   * imágenes, editor ampliado) en vez de salir del formulario.
+   */
+  handleBack(): boolean {
+    if (this.assistant() !== null) {
+      this.assistant.set(null);
+      return true;
+    }
+    if (this.picker() !== null) {
+      this.picker.set(null);
+      return true;
+    }
+    if (this.expanded()) {
+      this.setExpanded(false);
+      return true;
+    }
+    return false;
+  }
+
+  /** Escape reduce el editor ampliado, salvo que venga de un diálogo (ese se cierra primero, él solo). */
+  protected onEscape(event: Event): void {
+    const target = event.target as Element | null;
+    if (target?.closest?.('.modal, [role="dialog"]')) return;
+    if (this.expanded() && this.assistant() === null && this.picker() === null) this.setExpanded(false);
+  }
+
+  protected setExpanded(on: boolean): void {
+    if (this.expanded() === on) return;
+    this.expanded.set(on);
+    // Bloquea el scroll de la página de detrás mientras el editor ocupa la pantalla.
+    this.document.documentElement.classList.toggle('editor-expanded', on);
+    this.stopViewport?.();
+    this.stopViewport = null;
+    if (on) this.followViewport();
+  }
+
+  /**
+   * Ajusta el editor ampliado a la parte visible de la pantalla. Con el teclado abierto esa parte encoge
+   * (Chrome no redimensiona la página), así el texto que se escribe nunca queda tapado por el teclado.
+   */
+  private followViewport(): void {
+    const vv = this.document.defaultView?.visualViewport;
+    const el = this.bodyField()?.nativeElement;
+    if (!vv || !el) return;
+    const update = () => {
+      el.style.setProperty('--vv-top', `${vv.offsetTop}px`);
+      el.style.setProperty('--vv-height', `${vv.height}px`);
+    };
+    update();
+    vv.addEventListener('resize', update);
+    vv.addEventListener('scroll', update);
+    this.stopViewport = () => {
+      vv.removeEventListener('resize', update);
+      vv.removeEventListener('scroll', update);
+      el.style.removeProperty('--vv-top');
+      el.style.removeProperty('--vv-height');
+    };
+  }
+
+  protected openAssistant(field: AiField): void {
+    this.assistant.set(field);
+  }
+
+  /** Aplica la propuesta del asistente al campo correspondiente. */
+  protected applyAssistant(field: AiField | null, text: string): void {
+    if (field === 'BODY') {
+      this.editorRef()?.replaceContent(text);
+    } else if (field === 'SUMMARY') {
+      this.form.controls.summary.setValue(text);
+      this.form.controls.summary.markAsDirty();
+      this.form.controls.summary.markAsTouched();
+    }
   }
 
   protected onContent(html: string): void {

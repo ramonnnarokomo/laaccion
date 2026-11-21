@@ -6,7 +6,7 @@ import { unsavedChangesGuard } from './panel.routes';
 describe('unsavedChangesGuard', () => {
   let input: HTMLInputElement;
 
-  function run(trigger: 'popstate' | 'imperative', keyboardOpen: boolean, dirty = false): boolean {
+  function run(trigger: 'popstate' | 'imperative', keyboardOpen: boolean, dirty = false, handleBack?: () => boolean): boolean {
     const doc = {
       activeElement: input,
       documentElement: { clientHeight: 800 },
@@ -22,7 +22,7 @@ describe('unsavedChangesGuard', () => {
     return TestBed.runInInjectionContext(
       () =>
         unsavedChangesGuard(
-          { isDirty: () => dirty },
+          { isDirty: () => dirty, handleBack },
           {} as ActivatedRouteSnapshot,
           {} as RouterStateSnapshot,
           {} as RouterStateSnapshot,
@@ -53,6 +53,18 @@ describe('unsavedChangesGuard', () => {
 
   it('un enlace o botón navega aunque haya un campo activo', () => {
     expect(run('imperative', true)).toBe(true);
+  });
+
+  it('«atrás» cierra primero lo que la página tenga abierto', () => {
+    const handleBack = vi.fn(() => true);
+    expect(run('popstate', false, true, handleBack)).toBe(false);
+    expect(handleBack).toHaveBeenCalled();
+  });
+
+  it('un enlace no pasa por handleBack', () => {
+    const handleBack = vi.fn(() => true);
+    expect(run('imperative', false, false, handleBack)).toBe(true);
+    expect(handleBack).not.toHaveBeenCalled();
   });
 
   it('sigue pidiendo confirmación si hay cambios sin guardar', () => {

@@ -2,7 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
-  AnnouncementAdmin, AnnouncementMetrics, AnnouncementRequest, AnnouncementState, ArticleAdmin,
+  AiAssistRequest, AiAssistResponse, AnnouncementAdmin, AnnouncementMetrics, AnnouncementRequest, AnnouncementState, ArticleAdmin,
   ArticleAdminSummary, ArticleRequest, ArticleStatus, AuditEntry, Category, CategoryRequest,
   CreateUserRequest, ImageInfo, Page, Poll, PollRequest, UpdateUserRequest, User,
 } from './models';
@@ -96,6 +96,14 @@ export class AdminService {
   images(page = 0, size = 24): Observable<Page<ImageInfo>> {
     return this.http.get<Page<ImageInfo>>(`${this.base}/images`, { params: pageParams(page, size) });
   }
+  // Asistente de redacción
+  aiStatus(): Observable<{ enabled: boolean }> {
+    return this.http.get<{ enabled: boolean }>(`${this.base}/ai/status`);
+  }
+  aiAssist(request: AiAssistRequest): Observable<AiAssistResponse> {
+    return this.http.post<AiAssistResponse>(`${this.base}/ai/assist`, request);
+  }
+
   uploadImage(file: File): Observable<ImageInfo> {
     const form = new FormData();
     form.append('file', file);

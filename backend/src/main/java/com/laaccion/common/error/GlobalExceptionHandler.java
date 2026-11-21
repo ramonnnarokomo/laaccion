@@ -60,6 +60,11 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return problem(HttpStatus.TOO_MANY_REQUESTS, "Demasiadas peticiones", ex.getMessage());
     }
 
+    @ExceptionHandler(ServiceUnavailableException.class)
+    public ProblemDetail handleUnavailable(ServiceUnavailableException ex) {
+        return problem(HttpStatus.SERVICE_UNAVAILABLE, "Servicio no disponible", ex.getMessage());
+    }
+
     @ExceptionHandler(UnauthorizedException.class)
     public ProblemDetail handleUnauthorized(UnauthorizedException ex) {
         return problem(HttpStatus.UNAUTHORIZED, "No autenticado", ex.getMessage());

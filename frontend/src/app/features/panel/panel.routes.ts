@@ -9,9 +9,12 @@ import { PanelLayout } from './panel-layout';
  * 1. Si se ha pulsado «atrás» mientras se escribe con el teclado del móvil abierto, solo se cierra el
  *    teclado y no se navega (como en cualquier app). Va en el mismo guard que el aviso de cambios porque
  *    Angular ejecuta todos los guards de una ruta a la vez y el confirm() saltaría igualmente.
- * 2. Si el formulario tiene cambios sin guardar, se pide confirmación.
+ * 2. Si la página tiene algo abierto (un diálogo, el editor a pantalla completa), «atrás» lo cierra.
+ * 3. Si el formulario tiene cambios sin guardar, se pide confirmación.
  */
-export const unsavedChangesGuard: CanDeactivateFn<{ isDirty?(): boolean } | null> = (component) => {
+export const unsavedChangesGuard: CanDeactivateFn<{ isDirty?(): boolean; handleBack?(): boolean } | null> = (
+  component,
+) => {
   const doc = inject(DOCUMENT);
   if (inject(Router).currentNavigation()?.trigger === 'popstate') {
     const active = doc.activeElement;
@@ -19,6 +22,8 @@ export const unsavedChangesGuard: CanDeactivateFn<{ isDirty?(): boolean } | null
       active.blur();
       return false;
     }
+    // La página puede tener algo abierto que «atrás» debe cerrar primero (diálogo, editor ampliado).
+    if (component?.handleBack?.()) return false;
   }
   return !component?.isDirty?.() || confirm('Tienes cambios sin guardar. ¿Salir igualmente?');
 };

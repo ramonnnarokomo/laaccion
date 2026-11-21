@@ -25,18 +25,42 @@
         <textarea formControlName="dek" rows="2" maxlength="300"></textarea>
         <app-field-error [message]="err('dek')" />
       </label>
-      <label class="field">
-        <span>Resumen * <small>(portada, buscadores y redes · {{ form.controls.summary.value.length }}/600)</small></span>
-        <textarea formControlName="summary" rows="3" maxlength="600"></textarea>
-        <app-field-error [message]="err('summary')" />
-      </label>
-
       <div class="field">
         <div class="field-row">
-          <span>Cuerpo *</span>
-          <button type="button" class="link-btn" (click)="preview.set(!preview())">{{ preview() ? 'Volver a editar' : 'Vista previa' }}</button>
+          <label for="summary-input">Resumen * <small>(portada, buscadores y redes · {{ form.controls.summary.value.length }}/600)</small></label>
+          @if (aiEnabled()) {
+            <button type="button" class="icon-btn" title="Asistente de redacción" aria-label="Asistente de redacción para el resumen" (click)="openAssistant('SUMMARY')">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Z" /><path d="M13.5 6.5l4 4" /></svg>
+            </button>
+          }
         </div>
-        <div [hidden]="preview()">
+        <textarea id="summary-input" formControlName="summary" rows="3" maxlength="600"></textarea>
+        <app-field-error [message]="err('summary')" />
+      </div>
+
+      <!-- Con «Ampliar», este bloque ocupa toda la pantalla (barra de formato incluida) y no se desplaza la página. -->
+      <div class="field body-field" #bodyField [class.expanded]="expanded()">
+        <div class="field-row">
+          <span>Cuerpo *</span>
+          <div class="field-tools">
+            @if (aiEnabled()) {
+              <button type="button" class="icon-btn" title="Asistente de redacción" aria-label="Asistente de redacción para el cuerpo" (click)="openAssistant('BODY')">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Z" /><path d="M13.5 6.5l4 4" /></svg>
+              </button>
+            }
+            <button type="button" class="link-btn" (click)="preview.set(!preview())">{{ preview() ? 'Volver a editar' : 'Vista previa' }}</button>
+            <button type="button" class="icon-btn" [attr.aria-pressed]="expanded()" (click)="setExpanded(!expanded())">
+              @if (expanded()) {
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7" /></svg>
+                Reducir
+              } @else {
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" /></svg>
+                Ampliar
+              }
+            </button>
+          </div>
+        </div>
+        <div class="body-editor" [hidden]="preview()">
           <app-rich-editor [initial]="content()" (changed)="onContent($event)" (imageRequested)="openPicker('content')" />
         </div>
         @if (preview()) {
@@ -143,3 +167,12 @@
 }
 
 <app-image-picker [open]="picker() !== null" (picked)="onPicked($event)" (closed)="picker.set(null)" />
+
+<app-ai-assist
+  [field]="assistant()"
+  [text]="assistant() === 'SUMMARY' ? form.controls.summary.value : content()"
+  [title]="form.controls.title.value"
+  [context]="content()"
+  (applied)="applyAssistant(assistant(), $event)"
+  (closed)="assistant.set(null)"
+/>

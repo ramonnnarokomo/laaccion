@@ -94,6 +94,12 @@ export class RichEditor implements OnDestroy {
     this.editor?.commands.setContent(html, { emitUpdate: false });
   }
 
+  /** Sustituye el contenido como un cambio más del usuario: avisa al formulario y se puede deshacer (↶). */
+  replaceContent(html: string): void {
+    // Sin focus(): en el móvil abriría el teclado al aplicar la propuesta.
+    this.editor?.commands.setContent(html, { emitUpdate: true });
+  }
+
   /** Inserta detrás de la selección: así no sustituye un vídeo o imagen que esté seleccionado. */
   insertImage(src: string, alt: string): void {
     const e = this.editor;

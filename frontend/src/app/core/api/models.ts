@@ -246,3 +246,19 @@ export interface Problem {
   detail?: string;
   errors?: { field: string; message: string }[];
 }
+
+// Asistente de redacción (IA)
+export type AiField = 'BODY' | 'SUMMARY';
+export type AiMode = 'REVIEW' | 'REWRITE';
+export interface AiAssistRequest {
+  field: AiField;
+  mode: AiMode;
+  text: string;
+  title?: string;
+  context?: string;
+}
+/** format 'html': cuerpo reescrito (ya limpiado en el servidor); 'text': sugerencias o resumen. */
+export interface AiAssistResponse {
+  result: string;
+  format: 'html' | 'text';
+}
