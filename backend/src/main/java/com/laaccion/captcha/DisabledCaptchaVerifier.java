@@ -13,7 +13,7 @@ public class DisabledCaptchaVerifier implements CaptchaVerifier {
     private static final Logger log = LoggerFactory.getLogger(DisabledCaptchaVerifier.class);
 
     public DisabledCaptchaVerifier() {
-        log.warn("CAPTCHA DESACTIVADO: las votaciones no están protegidas contra bots. No usar en producción.");
+        log.warn("CAPTCHA DESACTIVADO: las votaciones y el login no están protegidos contra bots. No usar en producción.");
     }
 
     @Override

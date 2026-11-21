@@ -39,8 +39,10 @@ export class AuthService {
     return this.restoring;
   }
 
-  async login(email: string, password: string): Promise<Me> {
-    const me = await firstValueFrom(this.http.post<Me>('/api/v1/auth/login', { email, password }));
+  /** captchaToken: token de Turnstile (null si no hay captcha configurado; el back decide si lo exige). */
+  async login(email: string, password: string, captchaToken: string | null = null): Promise<Me> {
+    const body = captchaToken ? { email, password, captchaToken } : { email, password };
+    const me = await firstValueFrom(this.http.post<Me>('/api/v1/auth/login', body));
     this.current.set(me);
     this.restoring = Promise.resolve(me);
     return me;

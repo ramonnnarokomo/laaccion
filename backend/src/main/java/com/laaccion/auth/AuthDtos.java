@@ -10,7 +10,11 @@ public final class AuthDtos {
     private AuthDtos() {
     }
 
-    public record LoginRequest(@NotBlank @Size(max = 254) String email, @NotBlank @Size(max = 72) String password) {
+    /** captchaToken: token de Cloudflare Turnstile; obligatorio si el captcha está activado (producción). */
+    public record LoginRequest(
+            @NotBlank @Size(max = 254) String email,
+            @NotBlank @Size(max = 72) String password,
+            @Size(max = 4096) String captchaToken) {
     }
 
     public record ChangePasswordRequest(

@@ -915,3 +915,10 @@ main.panel-main {
     }
   }
 }
+.login-card .captcha {
+  display: flex;
+  justify-content: center;
+  &:empty {
+    display: none;
+  }
+}

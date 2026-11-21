@@ -2,8 +2,10 @@ package com.laaccion.auth;
 
 import com.laaccion.auth.AuthDtos.LoginRequest;
 import com.laaccion.auth.AuthDtos.MeResponse;
+import com.laaccion.captcha.CaptchaVerifier;
 import com.laaccion.common.ClientIpResolver;
 import com.laaccion.common.RateLimiter;
+import com.laaccion.common.error.BadRequestException;
 import com.laaccion.common.error.TooManyRequestsException;
 import com.laaccion.common.error.UnauthorizedException;
 import com.laaccion.config.AppProperties;
@@ -35,18 +37,20 @@ public class AuthService {
     private final CookieCsrfTokenRepository csrfTokenRepository;
     private final UserService userService;
     private final RateLimiter rateLimiter;
+    private final CaptchaVerifier captchaVerifier;
     private final ClientIpResolver clientIpResolver;
     private final AppProperties properties;
 
     public AuthService(AuthenticationManager authenticationManager,
             SecurityContextRepository securityContextRepository, CookieCsrfTokenRepository csrfTokenRepository,
             UserService userService, RateLimiter rateLimiter, ClientIpResolver clientIpResolver,
-            AppProperties properties) {
+            AppProperties properties, CaptchaVerifier captchaVerifier) {
         this.authenticationManager = authenticationManager;
         this.securityContextRepository = securityContextRepository;
         this.csrfTokenRepository = csrfTokenRepository;
         this.userService = userService;
         this.rateLimiter = rateLimiter;
+        this.captchaVerifier = captchaVerifier;
         this.clientIpResolver = clientIpResolver;
         this.properties = properties;
     }
@@ -55,6 +59,11 @@ public class AuthService {
         String ip = clientIpResolver.resolve(httpRequest);
         if (!rateLimiter.tryAcquire("login:" + ip, properties.rateLimit().loginPerMinute(), Duration.ofMinutes(1))) {
             throw new TooManyRequestsException("Demasiados intentos de inicio de sesión. Espera un minuto.");
+        }
+        // Captcha antes de mirar la contraseña: un bot no llega a sumar intentos fallidos ni a bloquear la
+        // cuenta de un editor (el bloqueo tras 5 fallos solo cuenta intentos con captcha válido).
+        if (!captchaVerifier.verify(request.captchaToken(), ip)) {
+            throw new BadRequestException("No se ha podido verificar que no eres un robot. Vuelve a intentarlo.");
         }
 
         String email = UserService.normalizeEmail(request.email());
