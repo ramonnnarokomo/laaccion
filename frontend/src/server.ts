@@ -155,12 +155,12 @@ app.use((req, res, next) => {
 
 // ------------------------------------------------------------------ Proxy hacia el backend
 
-const proxy = createProxyMiddleware<ExpressRequest, ExpressResponse>({
+const makeProxy = (timeoutMs: number) => createProxyMiddleware<ExpressRequest, ExpressResponse>({
   target: API_URL,
   changeOrigin: true,
   xfwd: false,
-  proxyTimeout: 30_000,
-  timeout: 30_000,
+  proxyTimeout: timeoutMs,
+  timeout: timeoutMs,
   // Express quita el prefijo montado (/api) de req.url: se vuelve a poner.
   pathRewrite: (_path, req) => req.originalUrl,
   on: {
@@ -185,6 +185,11 @@ const proxy = createProxyMiddleware<ExpressRequest, ExpressResponse>({
   },
 });
 
+const proxy = makeProxy(30_000);
+// El asistente de IA tarda más (el modelo razona y el back puede reintentar): hasta 150 s.
+const aiProxy = makeProxy(150_000);
+
+app.use('/api/v1/admin/ai', aiProxy);
 app.use('/api', proxy);
 app.use('/media', proxy);
 

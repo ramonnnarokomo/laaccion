@@ -33,7 +33,10 @@ import { ArticleHtmlPipe } from '../../../shared/ui/safe-html.pipe';
         </header>
 
         @if (loading()) {
-          <p class="ai-loading" role="status">Leyendo y pensando… puede tardar unos segundos.</p>
+          <div class="ai-loading" role="status">
+            <span class="ai-spinner" aria-hidden="true"></span>
+            <span>Leyendo y pensando… puede tardar unos segundos.</span>
+          </div>
         } @else if (result(); as r) {
           @if (mode() === 'REVIEW') {
             <div class="ai-suggestions">{{ r.result }}</div>

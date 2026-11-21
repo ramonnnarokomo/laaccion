@@ -79,6 +79,8 @@ app:
     model: ${APP_AI_MODEL:claude-haiku-5-5}
     # Solo para provider=openai, p. ej. https://generativelanguage.googleapis.com/v1beta/openai
     base-url: ${APP_AI_BASE_URL:}
+    # Modelo de reserva si el principal está saturado (503) o sin cuota (429). Vacío = ninguno.
+    fallback-model: ${APP_AI_FALLBACK_MODEL:}
     max-input-chars: 60000
     per-user-per-minute: 6
     per-user-per-day: 60

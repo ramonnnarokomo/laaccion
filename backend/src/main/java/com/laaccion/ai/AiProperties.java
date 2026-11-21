@@ -1,5 +1,6 @@
 package com.laaccion.ai;
 
+import java.util.List;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.util.StringUtils;
 
@@ -13,6 +14,7 @@ import org.springframework.util.StringUtils;
  * @param maxInputChars     longitud máxima del texto que se envía
  * @param perUserPerMinute  peticiones por editor y minuto
  * @param perUserPerDay     peticiones por editor y día (controla el gasto)
+ * @param fallbackModel     modelo de reserva si el principal está saturado o sin cuota; vacío = ninguno
  */
 @ConfigurationProperties(prefix = "app.ai")
 public record AiProperties(
@@ -22,7 +24,8 @@ public record AiProperties(
         String baseUrl,
         int maxInputChars,
         int perUserPerMinute,
-        int perUserPerDay) {
+        int perUserPerDay,
+        String fallbackModel) {
 
     public AiProperties {
         provider = StringUtils.hasText(provider) ? provider.trim().toLowerCase() : "anthropic";
@@ -30,6 +33,12 @@ public record AiProperties(
         maxInputChars = maxInputChars > 0 ? maxInputChars : 60_000;
         perUserPerMinute = perUserPerMinute > 0 ? perUserPerMinute : 6;
         perUserPerDay = perUserPerDay > 0 ? perUserPerDay : 60;
+        fallbackModel = StringUtils.hasText(fallbackModel) ? fallbackModel.trim() : null;
+    }
+
+    /** Modelos a probar en orden: el principal y, si lo hay y es otro, el de reserva. */
+    public List<String> models() {
+        return fallbackModel == null || fallbackModel.equals(model) ? List.of(model) : List.of(model, fallbackModel);
     }
 
     public boolean enabled() {

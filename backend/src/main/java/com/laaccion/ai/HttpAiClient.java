@@ -49,21 +49,28 @@ public class HttpAiClient implements AiClient {
         this.restClient = RestClient.builder().requestFactory(requestFactory).build();
     }
 
+    /** Pausa antes de reintentar un error pasajero del proveedor (los tests la ponen a 0). */
+    long retryDelayMillis = 1_500;
+
     @Override
     public String complete(String system, String user, int maxTokens) {
         if (!properties.enabled()) {
             throw new ServiceUnavailableException("El asistente de redacción no está configurado.");
         }
         try {
-            return properties.isOpenAiCompatible() ? callOpenAi(system, user) : callAnthropic(system, user, maxTokens);
+            return withRetries(properties.models(), model -> properties.isOpenAiCompatible()
+                    ? callOpenAi(model, system, user)
+                    : callAnthropic(model, system, user, maxTokens));
         } catch (RestClientResponseException ex) {
             int status = ex.getStatusCode().value();
-            log.warn("El proveedor de IA respondió {}: {}", status, abbreviate(ex.getResponseBodyAsString()));
             if (status == 401 || status == 403) {
                 throw new ServiceUnavailableException("La clave del asistente no es válida. Revisa APP_AI_API_KEY en Railway.");
             }
             if (status == 429) {
-                throw new ServiceUnavailableException("El proveedor de IA está saturado o se ha agotado el saldo. Prueba más tarde.");
+                throw new ServiceUnavailableException("Se ha alcanzado el límite de uso del asistente. Prueba en un rato.");
+            }
+            if (isTransient(status)) {
+                throw new ServiceUnavailableException("El modelo de IA está saturado ahora mismo. Prueba en un minuto.");
             }
             throw new ServiceUnavailableException("El asistente no está disponible ahora mismo. Prueba más tarde.");
         } catch (RestClientException ex) {
@@ -72,20 +79,74 @@ public class HttpAiClient implements AiClient {
         }
     }
 
-    private String callAnthropic(String system, String user, int maxTokens) {
+    @FunctionalInterface
+    interface ModelCall {
+        String complete(String model);
+    }
+
+    /**
+     * Prueba los modelos en orden. Un error pasajero (5xx o 529, "modelo saturado") se reintenta una vez
+     * con el mismo modelo; si sigue fallando, o si es un 429 (cuota agotada de ese modelo), se pasa al
+     * siguiente. Cualquier otro error se propaga sin más intentos. Si todos fallan, se lanza el último error.
+     */
+    String withRetries(List<String> models, ModelCall call) {
+        RestClientResponseException last = null;
+        for (String model : models) {
+            for (int attempt = 1; attempt <= 2; attempt++) {
+                try {
+                    return call.complete(model);
+                } catch (RestClientResponseException ex) {
+                    int status = ex.getStatusCode().value();
+                    log.warn("El proveedor de IA respondió {} con el modelo {} (intento {}): {}",
+                            status, model, attempt, abbreviate(ex.getResponseBodyAsString()));
+                    last = ex;
+                    if (status == 429) {
+                        break;
+                    }
+                    if (!isTransient(status)) {
+                        throw ex;
+                    }
+                    if (attempt == 1) {
+                        pause();
+                    }
+                }
+            }
+        }
+        if (last == null) {
+            throw new IllegalStateException("No hay ningún modelo configurado.");
+        }
+        throw last;
+    }
+
+    static boolean isTransient(int status) {
+        return status == 500 || status == 502 || status == 503 || status == 504 || status == 529;
+    }
+
+    private void pause() {
+        if (retryDelayMillis <= 0) {
+            return;
+        }
+        try {
+            Thread.sleep(retryDelayMillis);
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    private String callAnthropic(String model, String system, String user, int maxTokens) {
         String base = StringUtils.hasText(properties.baseUrl()) ? trimSlash(properties.baseUrl()) : ANTHROPIC_URL;
         Map<String, Object> response = restClient.post()
                 .uri(base + "/v1/messages")
                 .header("x-api-key", properties.apiKey())
                 .header("anthropic-version", ANTHROPIC_VERSION)
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(anthropicBody(properties.model(), system, user, maxTokens))
+                .body(anthropicBody(model, system, user, maxTokens))
                 .retrieve()
                 .body(MAP_TYPE);
         return parseAnthropic(response);
     }
 
-    private String callOpenAi(String system, String user) {
+    private String callOpenAi(String model, String system, String user) {
         if (!StringUtils.hasText(properties.baseUrl())) {
             throw new ServiceUnavailableException("Falta APP_AI_BASE_URL para el proveedor compatible con OpenAI.");
         }
@@ -93,7 +154,7 @@ public class HttpAiClient implements AiClient {
                 .uri(trimSlash(properties.baseUrl()) + "/chat/completions")
                 .header("Authorization", "Bearer " + properties.apiKey())
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(openAiBody(properties.model(), system, user))
+                .body(openAiBody(model, system, user))
                 .retrieve()
                 .body(MAP_TYPE);
         return parseOpenAi(response);
