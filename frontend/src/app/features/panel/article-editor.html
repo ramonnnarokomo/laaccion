@@ -122,6 +122,23 @@
         }
       </section>
     </aside>
+
+    <!-- Solo en móvil: guardar sin bajar hasta el final. Los mensajes completos siguen en «Publicación». -->
+    <div class="mobile-savebar">
+      <span class="mobile-savebar__msg" [class.ok]="saved() && !error()" [class.err]="error()" aria-hidden="true">
+        {{
+          error()
+            ? 'No se ha guardado: revisa los avisos'
+            : saved() ??
+              (form.controls.status.value === 'PUBLISHED'
+                ? 'Estado: publicado'
+                : form.controls.status.value === 'SCHEDULED'
+                  ? 'Estado: programado'
+                  : 'Estado: borrador')
+        }}
+      </span>
+      <button class="btn btn--primary" type="submit" [disabled]="saving()">{{ saving() ? 'Guardando…' : 'Guardar' }}</button>
+    </div>
   </form>
 }
 

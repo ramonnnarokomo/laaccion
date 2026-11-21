@@ -15,16 +15,16 @@ import { errorMessage } from '../../core/util/load-state';
       <p class="form-error" role="alert">{{ error() }}</p>
     }
     @if (data(); as d) {
-      <div class="table-wrap">
-        <table class="table">
+      <div class="table-wrap table-wrap--cards">
+        <table class="table table--cards">
           <thead><tr><th>Fecha</th><th>Quién</th><th>Acción</th><th>Elemento</th><th>Detalle</th></tr></thead>
           <tbody>
             @for (e of d.content; track e.id) {
               <tr>
                 <td>{{ e.createdAt | fecha: 'hora' }}</td>
-                <td>{{ e.actorEmail ?? '—' }}</td>
+                <td data-label="Quién">{{ e.actorEmail ?? '—' }}</td>
                 <td><code>{{ e.action }}</code></td>
-                <td>{{ e.entityType ?? '' }} {{ e.entityId ?? '' }}</td>
+                <td data-label="Elemento">{{ e.entityType ?? '' }} {{ e.entityId ?? '' }}</td>
                 <td>{{ e.summary ?? '' }}</td>
               </tr>
             } @empty {

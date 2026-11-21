@@ -30,8 +30,8 @@ import { STATUS_LABEL } from './shared/panel-util';
     }
     @if (data(); as d) {
       @if (d.content.length) {
-        <div class="table-wrap">
-          <table class="table">
+        <div class="table-wrap table-wrap--cards">
+          <table class="table table--cards">
             <thead>
               <tr><th>Titular</th><th>Estado</th><th>Sección</th><th>Autor</th><th>Fecha</th><th><span class="visually-hidden">Acciones</span></th></tr>
             </thead>

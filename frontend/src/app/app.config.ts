@@ -12,7 +12,9 @@ export const appConfig: ApplicationConfig = {
     provideRouter(
       routes,
       withInMemoryScrolling({ scrollPositionRestoration: 'enabled', anchorScrolling: 'enabled' }),
-      withRouterConfig({ paramsInheritanceStrategy: 'always' }),
+      // 'computed': si un guard cancela un «atrás» (cambios sin guardar, cerrar el teclado), el historial
+      // vuelve a su sitio en vez de perder la página anterior.
+      withRouterConfig({ paramsInheritanceStrategy: 'always', canceledNavigationResolution: 'computed' }),
     ),
     provideHttpClient(withFetch(), withInterceptors([csrfInterceptor, authErrorInterceptor])),
     // La hidratación reutiliza el HTML del servidor y su caché de peticiones (sin pedir dos veces).

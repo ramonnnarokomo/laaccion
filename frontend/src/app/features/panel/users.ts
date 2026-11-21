@@ -35,8 +35,8 @@ import { FieldError } from './shared/field-error';
         @if (listError()) {
           <p class="form-error" role="alert">{{ listError() }}</p>
         }
-        <div class="table-wrap">
-          <table class="table">
+        <div class="table-wrap table-wrap--cards">
+          <table class="table table--cards">
             <thead><tr><th>Persona</th><th>Rol</th><th>Estado</th><th>Último acceso</th><th><span class="visually-hidden">Acciones</span></th></tr></thead>
             <tbody>
               @for (u of users(); track u.id) {
@@ -48,7 +48,7 @@ import { FieldError } from './shared/field-error';
                     </select>
                   </td>
                   <td>{{ u.enabled ? 'Activa' : 'Desactivada' }}</td>
-                  <td>{{ u.lastLoginAt ? (u.lastLoginAt | fecha: 'hora') : 'Nunca' }}</td>
+                  <td data-label="Último acceso">{{ u.lastLoginAt ? (u.lastLoginAt | fecha: 'hora') : 'Nunca' }}</td>
                   <td class="actions">
                     <button type="button" class="link-btn" (click)="rename(u)">Renombrar</button>
                     <button type="button" class="link-btn" (click)="resetPassword(u)">Nueva contraseña</button>

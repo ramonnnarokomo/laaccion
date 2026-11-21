@@ -2,6 +2,9 @@
 
 .panel {
   min-height: 100vh;
+  /* Red de seguridad: nada del panel puede provocar scroll horizontal. clip (no hidden) para no romper
+     los elementos sticky, como la barra de formato del editor. */
+  overflow-x: clip;
   font-family: var(--sans);
   font-size: 15px;
   color: var(--ink);
@@ -265,6 +268,9 @@ main.panel-main {
   }
 }
 .table-wrap {
+  /* position: relative para que el texto oculto de las cabeceras (.visually-hidden, absoluto) quede dentro
+     del scroll de la tabla y no ensanche la página entera en el móvil. */
+  position: relative;
   overflow-x: auto;
   background: #fffdf8;
   border: 1px solid var(--line);
@@ -642,13 +648,23 @@ main.panel-main {
   color: var(--stone);
 }
 @media (max-width: 1100px) {
+  /* minmax(0, 1fr) y min-width: 0: sin esto, una tabla ancha estira la columna (y el formulario de al lado)
+     más allá de la pantalla. */
   .editor-grid,
   .workspace {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .editor-grid > *,
+  .workspace > * {
+    min-width: 0;
   }
   .editor-side {
     position: static;
   }
+}
+/* Solo existe en móvil (ver más abajo). */
+.mobile-savebar {
+  display: none;
 }
 @media (max-width: 760px) {
   .panel-menu-btn {
@@ -673,5 +689,229 @@ main.panel-main {
   }
   main.panel-main {
     padding: 18px 16px 50px;
+  }
+
+  /* --- Móvil: legibilidad y edición cómoda --- */
+  .panel {
+    font-size: 16px;
+  }
+  .panel-top {
+    padding: 10px 16px;
+  }
+  .panel-brand {
+    font-size: 17px;
+    white-space: nowrap;
+    span {
+      font-size: 10.5px;
+      margin-left: 8px;
+    }
+  }
+  .panel-menu-btn {
+    padding: 9px 14px;
+    font-size: 14px;
+  }
+  .panel-nav a,
+  button.panel-nav__mobile {
+    padding: 13px 20px;
+    font-size: 16px;
+  }
+  .panel-head h1 {
+    font-size: 30px;
+  }
+  .field > span,
+  .field legend,
+  .field-row {
+    font-size: 14px;
+  }
+  /* 16 px en los campos: se leen mejor y el navegador no hace zoom al tocarlos. */
+  .panel input:not([type='checkbox']):not([type='radio']):not([type='file']),
+  .panel select,
+  .panel textarea {
+    font-size: 16px;
+    padding: 11px 12px;
+  }
+  .input-title {
+    font-size: 21px !important;
+  }
+  .check {
+    min-height: 40px;
+    input {
+      width: 20px;
+      height: 20px;
+    }
+  }
+  .card {
+    padding: 16px;
+  }
+  .btn {
+    min-height: 44px;
+  }
+  .link-btn {
+    font-size: 14px;
+    padding: 6px 0;
+  }
+  .muted {
+    font-size: 14px;
+  }
+  /* Pestañas y barra de formato en una sola fila que se desliza con el dedo. */
+  .tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    &::-webkit-scrollbar {
+      display: none;
+    }
+    button {
+      flex: none;
+      white-space: nowrap;
+      font-size: 14px;
+    }
+  }
+  .rte-toolbar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 4px;
+    scrollbar-width: none;
+    &::-webkit-scrollbar {
+      display: none;
+    }
+    button {
+      flex: none;
+      min-width: 42px;
+      min-height: 42px;
+      font-size: 14px;
+    }
+  }
+  .rte-content .ProseMirror {
+    min-height: 50vh;
+    padding: 16px;
+    font-size: 17px;
+    line-height: 1.6;
+  }
+  .preview {
+    padding: 16px;
+  }
+  .item {
+    flex-direction: column;
+    .actions {
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px 18px;
+    }
+  }
+  .upload-row {
+    flex-wrap: wrap;
+  }
+  .modal {
+    inset: 3vh 50% auto auto;
+    width: 94vw;
+    max-height: 94vh;
+    padding: 16px;
+  }
+  .pager {
+    flex-wrap: wrap;
+    justify-content: center;
+    text-align: center;
+  }
+
+  /* Barra fija para guardar sin bajar hasta el final del formulario. Se oculta mientras se escribe para no
+     tapar el texto en navegadores que suben lo fijo encima del teclado. */
+  .mobile-savebar {
+    display: flex;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 40;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+    background: #fffdf8;
+    border-top: 1px solid var(--line);
+    box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.08);
+    .btn {
+      flex: none;
+      min-width: 130px;
+    }
+  }
+  .mobile-savebar__msg {
+    font-size: 14px;
+    color: var(--stone);
+    &.ok {
+      color: #2d5530;
+    }
+    &.err {
+      color: var(--burgundy);
+    }
+  }
+  .panel:has(input:not([type='checkbox']):not([type='radio']):not([type='file']):focus, textarea:focus, .ProseMirror-focused)
+    .mobile-savebar {
+    display: none;
+  }
+  .editor-grid {
+    padding-bottom: 76px;
+  }
+}
+
+/* Tablas como fichas en el móvil: sin scroll lateral y con botones fáciles de pulsar. */
+@media (max-width: 620px) {
+  .table-wrap--cards {
+    overflow: visible;
+    background: none;
+    border: 0;
+  }
+  .table--cards {
+    thead {
+      display: none;
+    }
+    tbody {
+      display: grid;
+      gap: 10px;
+    }
+    tr {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px 14px;
+      padding: 13px 14px;
+      background: #fffdf8;
+      border: 1px solid var(--line);
+    }
+    td {
+      display: block;
+      padding: 0;
+      border: 0;
+      font-size: 14px;
+      color: var(--stone);
+    }
+    td:first-child {
+      flex: 1 0 100%;
+      font-size: 16px;
+      color: var(--ink);
+    }
+    td[data-label]::before {
+      content: attr(data-label) ': ';
+      font-weight: 600;
+    }
+    td.actions {
+      flex: 1 0 100%;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px 20px;
+      margin-top: 4px;
+      padding-top: 8px;
+      border-top: 1px solid var(--line);
+      white-space: normal;
+      a,
+      button {
+        font-size: 14px;
+        padding: 7px 0;
+      }
+    }
+    td:empty {
+      display: none;
+    }
   }
 }

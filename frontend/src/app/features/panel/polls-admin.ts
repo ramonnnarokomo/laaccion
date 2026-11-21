@@ -22,16 +22,16 @@ import { STATUS_LABEL } from './shared/panel-util';
     }
     @if (data(); as d) {
       @if (d.content.length) {
-        <div class="table-wrap">
-          <table class="table">
+        <div class="table-wrap table-wrap--cards">
+          <table class="table table--cards">
             <thead><tr><th>Pregunta</th><th>Estado</th><th>Votos</th><th>Cierre</th><th><span class="visually-hidden">Acciones</span></th></tr></thead>
             <tbody>
               @for (p of d.content; track p.id) {
                 <tr>
                   <td><a class="strong-link" [routerLink]="[p.id]">{{ p.question }}</a></td>
                   <td><span class="badge" [class]="'badge--' + p.status.toLowerCase()">{{ p.status === 'DRAFT' ? 'Borrador' : label[p.status] }}</span></td>
-                  <td>{{ p.totalVotes }}</td>
-                  <td>{{ p.closesAt ? (p.closesAt | fecha: 'hora') : '—' }}</td>
+                  <td data-label="Votos">{{ p.totalVotes }}</td>
+                  <td data-label="Cierre">{{ p.closesAt ? (p.closesAt | fecha: 'hora') : '—' }}</td>
                   <td class="actions">
                     @if (p.status !== 'DRAFT') {
                       <a [href]="'/encuestas/' + p.id" target="_blank" rel="noopener">Ver</a>
