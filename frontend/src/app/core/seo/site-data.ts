@@ -19,7 +19,7 @@ export const EDITORS: readonly Editor[] = [
 export const CONTACT_EMAIL = 'contacto@laaccion.com';
 
 /** Perfiles oficiales en redes (Instagram, TikTok, X, YouTube...). Se publican como sameAs. */
-export const SOCIAL_PROFILES: readonly string[] = [];
+export const SOCIAL_PROFILES: readonly string[] = ['https://www.instagram.com/la_accion_esp/'];
 
 export const ORG_ID = absoluteUrl('/#organizacion');
 export const WEBSITE_ID = absoluteUrl('/#web');
