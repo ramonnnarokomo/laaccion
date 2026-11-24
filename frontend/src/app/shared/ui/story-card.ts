@@ -102,7 +102,7 @@ import { FechaPipe } from '../../core/util/fecha.pipe';
           tabindex="-1"
           aria-hidden="true"
         >
-          <img [src]="a.imageUrl" [attr.width]="a.imageWidth" [attr.height]="a.imageHeight" alt="" loading="lazy" decoding="async" />
+          <img [src]="a.imageUrl" [attr.width]="a.imageWidth" [attr.height]="a.imageHeight" [attr.alt]="a.imageAlt || ''" loading="lazy" decoding="async" />
         </a>
       }
       <a class="category" [routerLink]="['/seccion', a.category.slug]">{{ a.category.name }}</a>

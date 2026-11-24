@@ -4,6 +4,8 @@
 }
 .article-head {
   text-align: center;
+  // El titular mide su columna (cqi) para no salirse aunque tenga una palabra muy larga.
+  container-type: inline-size;
   padding: 18px 0 26px;
   border-bottom: 1px solid var(--line);
   margin-bottom: 30px;
@@ -12,7 +14,7 @@
   }
 }
 h1 {
-  font-size: clamp(36px, 5.4vw, 64px);
+  font-size: min(clamp(36px, 5.4vw, 64px), calc(100cqi / var(--word-em, 1)));
   line-height: 1;
   letter-spacing: -0.04em;
   font-weight: 600;

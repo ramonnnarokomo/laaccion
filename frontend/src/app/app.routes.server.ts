@@ -3,6 +3,7 @@ import { RenderMode, ServerRoute } from '@angular/ssr';
 export const serverRoutes: ServerRoute[] = [
   // Páginas estáticas: se generan una vez en el build.
   { path: 'texto-fundacional', renderMode: RenderMode.Prerender },
+  { path: 'quienes-somos', renderMode: RenderMode.Prerender },
   { path: 'aviso-legal', renderMode: RenderMode.Prerender },
   { path: 'privacidad', renderMode: RenderMode.Prerender },
   { path: 'cookies', renderMode: RenderMode.Prerender },

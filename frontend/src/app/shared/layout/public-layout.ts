@@ -61,6 +61,7 @@ interface NavItem {
       <footer class="site-footer">
         <span>© {{ year }} LA ACCIÓN · Publicación independiente</span>
         <nav aria-label="Información legal">
+          <a routerLink="/quienes-somos">Quiénes somos</a>
           <a routerLink="/aviso-legal">Aviso legal</a>
           <a routerLink="/privacidad">Privacidad</a>
           <a routerLink="/cookies">Cookies</a>

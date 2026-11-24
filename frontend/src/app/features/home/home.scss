@@ -8,12 +8,15 @@
 }
 .lead-copy {
   padding: 8px 0;
+  // El titular mide su columna (cqi) para no salirse aunque tenga una palabra muy larga.
+  container-type: inline-size;
   .section-label {
     display: inline-block;
   }
 }
-h1 {
-  font-size: clamp(38px, 4.5vw, 66px);
+.lead-title {
+  font-size: min(clamp(38px, 4.5vw, 66px), calc(100cqi / var(--word-em, 1)));
+  overflow-wrap: break-word;
   line-height: 0.98;
   letter-spacing: -0.045em;
   font-weight: 600;
@@ -162,8 +165,8 @@ h1 {
   .lead-copy {
     padding: 0;
   }
-  h1 {
-    font-size: 40px;
+  .lead-title {
+    font-size: min(40px, calc(100cqi / var(--word-em, 1)));
     margin-bottom: 14px;
   }
   .dek {

@@ -193,11 +193,24 @@ app.use('/api/v1/admin/ai', aiProxy);
 app.use('/api', proxy);
 app.use('/media', proxy);
 
-// ------------------------------------------------------------------ robots, sitemap y RSS
+// ------------------------------------------------------------------ robots, sitemaps, RSS y llms.txt
 
 app.get('/robots.txt', (_req, res) => {
   res.type('text/plain').setHeader('Cache-Control', 'public, max-age=3600');
-  res.send(`User-agent: *\nAllow: /\nDisallow: /panel\nDisallow: /api/\n\nSitemap: ${SITE_URL}/sitemap.xml\n`);
+  res.send(
+    [
+      '# Buscadores y asistentes de IA son bienvenidos: queremos que nos lean y que nos citen.',
+      '# Resumen para modelos de lenguaje: ' + SITE_URL + '/llms.txt',
+      'User-agent: *',
+      'Allow: /',
+      'Disallow: /panel',
+      'Disallow: /api/',
+      '',
+      `Sitemap: ${SITE_URL}/sitemap.xml`,
+      `Sitemap: ${SITE_URL}/news-sitemap.xml`,
+      '',
+    ].join('\n'),
+  );
 });
 
 interface ArticleItem {
@@ -209,6 +222,18 @@ interface ArticleItem {
   publishedAt: string;
   category: { name: string; slug: string };
   imageUrl: string | null;
+  imageAlt?: string | null;
+}
+interface PollItem {
+  id: number;
+  question: string;
+  status: string;
+  createdAt: string;
+}
+interface CategoryItem {
+  slug: string;
+  name: string;
+  description?: string | null;
 }
 interface PageOf<T> {
   content: T[];
@@ -248,6 +273,11 @@ async function allArticles(limit = 1000): Promise<ArticleItem[]> {
   return out.slice(0, limit);
 }
 
+/** URL absoluta para rutas del propio sitio (las imágenes vienen como /media/...). */
+function absolute(pathOrUrl: string): string {
+  return /^https?:\/\//i.test(pathOrUrl) ? pathOrUrl : SITE_URL + (pathOrUrl.startsWith('/') ? '' : '/') + pathOrUrl;
+}
+
 export function xmlEscape(value: string): string {
   return value.replace(/[<>&'"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' })[c]!);
 }
@@ -255,21 +285,31 @@ export function xmlEscape(value: string): string {
 app.get('/sitemap.xml', async (_req, res) => {
   try {
     const body = await cached('sitemap', async () => {
-      const [articles, categories] = await Promise.all([
+      const [articles, categories, polls] = await Promise.all([
         allArticles(),
-        apiGet<{ slug: string }[]>('/api/v1/categories'),
+        apiGet<CategoryItem[]>('/api/v1/categories'),
+        apiGet<PageOf<PollItem>>('/api/v1/polls?page=0&size=50').catch(() => ({ content: [], totalPages: 0 })),
       ]);
       const urls: string[] = [
         `<url><loc>${SITE_URL}/</loc><changefreq>hourly</changefreq></url>`,
         `<url><loc>${SITE_URL}/texto-fundacional</loc></url>`,
+        `<url><loc>${SITE_URL}/quienes-somos</loc></url>`,
         `<url><loc>${SITE_URL}/tablon</loc><changefreq>daily</changefreq></url>`,
         `<url><loc>${SITE_URL}/encuestas</loc><changefreq>daily</changefreq></url>`,
         ...categories.map((c) => `<url><loc>${SITE_URL}/seccion/${xmlEscape(c.slug)}</loc><changefreq>daily</changefreq></url>`),
-        ...articles.map(
-          (a) => `<url><loc>${SITE_URL}/articulo/${xmlEscape(a.slug)}</loc><lastmod>${xmlEscape(a.publishedAt)}</lastmod></url>`,
-        ),
+        ...articles.map((a) => {
+          const image = a.imageUrl
+            ? `<image:image><image:loc>${xmlEscape(absolute(a.imageUrl))}</image:loc></image:image>`
+            : '';
+          return `<url><loc>${SITE_URL}/articulo/${xmlEscape(a.slug)}</loc><lastmod>${xmlEscape(a.publishedAt)}</lastmod>${image}</url>`;
+        }),
+        ...polls.content.map((p) => `<url><loc>${SITE_URL}/encuestas/${p.id}</loc></url>`),
       ];
-      return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join('\n')}\n</urlset>\n`;
+      return (
+        `<?xml version="1.0" encoding="UTF-8"?>\n` +
+        `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n` +
+        `${urls.join('\n')}\n</urlset>\n`
+      );
     });
     res.type('application/xml').setHeader('Cache-Control', 'public, max-age=600');
     res.send(body);
@@ -312,6 +352,151 @@ app.get('/rss.xml', async (_req, res) => {
     res.status(503).type('text/plain').send('RSS no disponible temporalmente');
   }
 });
+
+/**
+ * Sitemap de noticias (Google News): solo los artículos de las últimas 48 horas, que es lo que Google
+ * lee de este formato. Ayuda a que una noticia aparezca en "Noticias" y en Discover en minutos.
+ */
+app.get('/news-sitemap.xml', async (_req, res) => {
+  try {
+    const body = await cached('news-sitemap', async () => {
+      const page = await apiGet<PageOf<ArticleItem>>('/api/v1/articles?page=0&size=50');
+      const since = Date.now() - 48 * 60 * 60 * 1000;
+      const urls = page.content
+        .filter((a) => new Date(a.publishedAt).getTime() >= since)
+        .map(
+          (a) =>
+            `<url><loc>${SITE_URL}/articulo/${xmlEscape(a.slug)}</loc><news:news>` +
+            `<news:publication><news:name>LA ACCIÓN</news:name><news:language>es</news:language></news:publication>` +
+            `<news:publication_date>${xmlEscape(a.publishedAt)}</news:publication_date>` +
+            `<news:title>${xmlEscape(a.title)}</news:title></news:news></url>`,
+        );
+      return (
+        `<?xml version="1.0" encoding="UTF-8"?>\n` +
+        `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:news="http://www.google.com/schemas/sitemap-news/0.9">\n` +
+        `${urls.join('\n')}${urls.length ? '\n' : ''}</urlset>\n`
+      );
+    });
+    res.type('application/xml').setHeader('Cache-Control', 'public, max-age=600');
+    res.send(body);
+  } catch {
+    res.status(503).type('text/plain').send('Sitemap no disponible temporalmente');
+  }
+});
+
+/** Una línea de Markdown sin saltos ni corchetes que rompan el enlace. */
+function mdLine(value: string): string {
+  return value.replace(/\s+/g, ' ').replace(/[[\]]/g, '').trim();
+}
+
+/**
+ * llms.txt (llmstxt.org): resumen en Markdown para buscadores con IA (ChatGPT, Perplexity, Claude,
+ * Gemini...). Les dice en un vistazo qué es el periódico, quién lo hace y qué ha publicado, con enlaces.
+ */
+app.get('/llms.txt', async (_req, res) => {
+  try {
+    const body = await cached('llms', async () => {
+      const [page, categories] = await Promise.all([
+        apiGet<PageOf<ArticleItem>>('/api/v1/articles?page=0&size=50'),
+        apiGet<CategoryItem[]>('/api/v1/categories'),
+      ]);
+      const date = (iso: string) => iso.slice(0, 10);
+      return [
+        '# LA ACCIÓN',
+        '',
+        '> Periódico independiente y sin ánimo de lucro de pensamiento, cultura y democracia, editado en España por ' +
+          'Alberto Marín Burguillo y Ramón Ángel Nnar Okomo. Su línea editorial parte de una premisa: nunca ha existido ' +
+          'una democracia formal en España.',
+        '',
+        'Todos los textos van firmados por su autor y fechados. Las encuestas son anónimas y abiertas a los lectores. ' +
+          'Contacto: contacto@laaccion.com.',
+        '',
+        '## Sobre la publicación',
+        '',
+        `- [Quiénes somos](${SITE_URL}/quienes-somos): qué es LA ACCIÓN, sus editores y cómo trabaja`,
+        `- [Texto fundacional](${SITE_URL}/texto-fundacional): declaración de principios sobre la Democracia Formal, la hegemonía cultural y la libertad política colectiva`,
+        `- [Aviso legal](${SITE_URL}/aviso-legal): titular y datos de contacto`,
+        '',
+        '## Secciones',
+        '',
+        ...categories.map(
+          (c) => `- [${mdLine(c.name)}](${SITE_URL}/seccion/${c.slug})${c.description ? `: ${mdLine(c.description)}` : ''}`,
+        ),
+        `- [Encuestas](${SITE_URL}/encuestas): preguntas abiertas a los lectores y sus resultados`,
+        `- [El Tablón](${SITE_URL}/tablon): convocatorias, encuentros, lecturas y propuestas`,
+        '',
+        '## Artículos recientes',
+        '',
+        ...page.content.map(
+          (a) =>
+            `- [${mdLine(a.title)}](${SITE_URL}/articulo/${a.slug}): ${mdLine(a.dek || a.summary)} ` +
+            `(${mdLine(a.author)}, ${date(a.publishedAt)}, sección ${mdLine(a.category.name)})`,
+        ),
+        '',
+        '## Optional',
+        '',
+        `- [RSS](${SITE_URL}/rss.xml): últimos artículos`,
+        `- [Sitemap](${SITE_URL}/sitemap.xml): todas las páginas`,
+        '',
+      ].join('\n');
+    });
+    res.type('text/plain; charset=utf-8').setHeader('Cache-Control', 'public, max-age=600');
+    res.send(body);
+  } catch {
+    res.status(503).type('text/plain').send('No disponible temporalmente');
+  }
+});
+
+// ------------------------------------------------------------------ IndexNow (Bing, Yandex, Seznam...)
+
+/**
+ * IndexNow avisa al instante a Bing y compañía de cada artículo nuevo (Bing alimenta también la búsqueda
+ * de ChatGPT y Copilot). La clave es pública por diseño: demuestra que el aviso viene de este dominio.
+ */
+const INDEXNOW_KEY = (env['INDEXNOW_KEY'] || '726ab23eb2fd7c43bcf1c51ec7bc1d1b').trim();
+
+app.get(`/${INDEXNOW_KEY}.txt`, (_req, res) => {
+  res.type('text/plain').setHeader('Cache-Control', 'public, max-age=86400');
+  res.send(INDEXNOW_KEY);
+});
+
+const notified = new Set<string>();
+let firstIndexNowRun = true;
+
+export async function notifyIndexNow(): Promise<void> {
+  const page = await apiGet<PageOf<ArticleItem>>('/api/v1/articles?page=0&size=20');
+  const recent = Date.now() - 48 * 60 * 60 * 1000;
+  const pending: string[] = [];
+  for (const a of page.content) {
+    const id = `${a.slug}|${a.publishedAt}`;
+    if (notified.has(id)) continue;
+    // Al arrancar solo se avisa de lo publicado en las últimas 48 h (no de todo el archivo en cada deploy).
+    if (firstIndexNowRun && new Date(a.publishedAt).getTime() < recent) {
+      notified.add(id);
+      continue;
+    }
+    pending.push(id);
+  }
+  firstIndexNowRun = false;
+  if (!pending.length) return;
+  const urlList = [`${SITE_URL}/`, ...pending.map((id) => `${SITE_URL}/articulo/${encodeURIComponent(id.split('|')[0])}`)];
+  const res = await fetch('https://api.indexnow.org/indexnow', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json; charset=utf-8' },
+    body: JSON.stringify({ host: SITE_HOST, key: INDEXNOW_KEY, keyLocation: `${SITE_URL}/${INDEXNOW_KEY}.txt`, urlList }),
+    signal: AbortSignal.timeout(10_000),
+  });
+  // Si falla, no se marcan como enviados: se reintenta en la siguiente vuelta.
+  if (res.ok) pending.forEach((id) => notified.add(id));
+  console.log(`IndexNow: ${urlList.length} URL(s) -> ${res.status}`);
+}
+
+function startIndexNow(): void {
+  if (!IS_PROD || env['INDEXNOW_DISABLED'] === 'true') return;
+  const run = () => notifyIndexNow().catch((error) => console.warn('IndexNow:', (error as Error).message));
+  setTimeout(run, 60_000).unref();
+  setInterval(run, 15 * 60 * 1000).unref();
+}
 
 // ------------------------------------------------------------------ Estáticos
 
@@ -378,6 +563,7 @@ if (isMainModule(import.meta.url) || env['pm_id']) {
     if (error) throw error;
     console.log(`LA ACCIÓN escuchando en http://localhost:${port} (API: ${API_URL})`);
   });
+  startIndexNow();
 }
 
 /** Lo usa el CLI de Angular (ng serve y el prerender del build). */

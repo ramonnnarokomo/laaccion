@@ -25,6 +25,7 @@ export const routes: Routes = [
         path: 'texto-fundacional',
         loadComponent: () => import('./features/fundacional/fundacional-page').then((m) => m.FundacionalPage),
       },
+      { path: 'quienes-somos', loadComponent: () => import('./features/about/about-page').then((m) => m.AboutPage) },
       { path: 'encuestas', loadComponent: () => import('./features/polls/polls-page').then((m) => m.PollsPage) },
       { path: 'encuestas/:id', loadComponent: () => import('./features/polls/poll-page').then((m) => m.PollPage) },
       {

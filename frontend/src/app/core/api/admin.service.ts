@@ -1,6 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, from, switchMap } from 'rxjs';
+import { compressImage } from '../util/image-compress';
 import {
   AiAssistRequest, AiAssistResponse, AnnouncementAdmin, AnnouncementMetrics, AnnouncementRequest, AnnouncementState, ArticleAdmin,
   ArticleAdminSummary, ArticleRequest, ArticleStatus, AuditEntry, Category, CategoryRequest,
@@ -104,10 +105,15 @@ export class AdminService {
     return this.http.post<AiAssistResponse>(`${this.base}/ai/assist`, request);
   }
 
+  /** Comprime en el navegador (1600 px, WebP) y sube. */
   uploadImage(file: File): Observable<ImageInfo> {
-    const form = new FormData();
-    form.append('file', file);
-    return this.http.post<ImageInfo>(`${this.base}/images`, form);
+    return from(compressImage(file)).pipe(
+      switchMap((ready) => {
+        const form = new FormData();
+        form.append('file', ready);
+        return this.http.post<ImageInfo>(`${this.base}/images`, form);
+      }),
+    );
   }
   deleteImage(id: number): Observable<void> {
     return this.http.delete<void>(`${this.base}/images/${id}`);

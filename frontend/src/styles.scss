@@ -214,6 +214,16 @@ main {
   text-transform: uppercase;
   color: var(--stone);
 }
+.byline .author-link {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--line);
+  text-underline-offset: 3px;
+  &:hover {
+    color: var(--burgundy);
+    text-decoration-color: currentColor;
+  }
+}
 
 .read-link {
   display: inline-block;

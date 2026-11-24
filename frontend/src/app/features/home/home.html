@@ -1,3 +1,5 @@
+<h1 class="visually-hidden">LA ACCIÓN — Periódico independiente de pensamiento, cultura y democracia</h1>
+
 @switch (state().status) {
   @case ('loading') {
     <div class="lead-grid" aria-busy="true">
@@ -19,7 +21,7 @@
     <section class="lead-grid">
       <article class="lead-copy">
         <a class="section-label" [routerLink]="['/seccion', lead.category.slug]">{{ lead.category.name }}</a>
-        <h1><a [routerLink]="['/articulo', lead.slug]">{{ lead.title }}</a></h1>
+        <h2 class="lead-title" [style.--word-em]="wordEm(lead.title)"><a [routerLink]="['/articulo', lead.slug]">{{ lead.title }}</a></h2>
         @if (lead.dek) {
           <p class="dek">{{ lead.dek }}</p>
         }
@@ -32,7 +34,7 @@
 
       <a class="feature-art" [routerLink]="['/articulo', lead.slug]" tabindex="-1" aria-hidden="true" [class.has-image]="!!lead.imageUrl">
         @if (lead.imageUrl) {
-          <img [src]="lead.imageUrl" [attr.width]="lead.imageWidth" [attr.height]="lead.imageHeight" alt="" fetchpriority="high" decoding="async" />
+          <img [src]="lead.imageUrl" [attr.width]="lead.imageWidth" [attr.height]="lead.imageHeight" [attr.alt]="lead.imageAlt || ''" fetchpriority="high" decoding="async" />
         } @else {
           <app-sun-art class="art-sun" />
           <div class="art-caption"><span>{{ lead.category.name }}</span><span>LA ACCIÓN</span></div>

@@ -4,12 +4,14 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { catchError, map, of, shareReplay, switchMap, tap } from 'rxjs';
 import { ArticleDetail } from '../../core/api/models';
 import { ContentService } from '../../core/api/content.service';
-import { SITE_NAME, SeoService, absoluteUrl } from '../../core/seo/seo.service';
+import { SeoService, absoluteUrl } from '../../core/seo/seo.service';
+import { WEBSITE_ID, authorNode, breadcrumbNode, findEditor, organizationNode } from '../../core/seo/site-data';
 import { FechaPipe } from '../../core/util/fecha.pipe';
 import { injectHttpStatus } from '../../core/util/http-status';
 import { LoadState, toLoadState } from '../../core/util/load-state';
 import { EmbedFacades } from '../../shared/ui/article-html';
 import { ArticleHtmlPipe } from '../../shared/ui/safe-html.pipe';
+import { longestWordEm } from '../../shared/ui/headline-fit';
 import { StoryCard } from '../../shared/ui/story-card';
 
 @Component({
@@ -40,6 +42,11 @@ export class ArticlePage {
     const s = this.state();
     return s.status === 'ok' ? s.data : null;
   });
+
+  protected readonly wordEm = longestWordEm;
+
+  /** Ancla del autor en Quiénes somos, si es uno de los editores. */
+  protected readonly authorAnchor = computed(() => findEditor(this.article()?.author ?? '')?.id ?? null);
 
   /** Otros artículos de la misma sección (si falla, simplemente no se muestran). */
   protected readonly related = toSignal(
@@ -79,13 +86,19 @@ export class ArticlePage {
     } else if (s.status === 'ok') {
       const a = s.data;
       const path = `/articulo/${a.slug}`;
+      const sectionPath = `/seccion/${a.category.slug}`;
       const image = a.imageUrl ? absoluteUrl(a.imageUrl) : absoluteUrl('/img/og-default.jpg');
+      const hasSize = !!a.imageUrl && !!a.imageWidth && !!a.imageHeight;
       this.seo.set({
         title: a.title,
-        description: a.dek || a.summary,
+        // El resumen es el texto pensado para buscadores; la entradilla, más corta, para las redes.
+        description: a.summary || a.dek,
+        socialDescription: a.dek || a.summary,
         path,
         image: a.imageUrl,
         imageAlt: a.imageAlt,
+        imageWidth: a.imageWidth,
+        imageHeight: a.imageHeight,
         type: 'article',
         article: {
           publishedAt: a.publishedAt,
@@ -94,26 +107,36 @@ export class ArticlePage {
           section: a.category.name,
           tags: a.tags.map((t) => t.name),
         },
-        jsonLd: {
-          '@context': 'https://schema.org',
-          '@type': 'NewsArticle',
-          headline: a.title.slice(0, 110),
-          description: a.dek || a.summary,
-          image: [image],
-          datePublished: a.publishedAt,
-          dateModified: a.updatedAt,
-          inLanguage: 'es-ES',
-          articleSection: a.category.name,
-          keywords: a.tags.map((t) => t.name).join(', ') || undefined,
-          author: [{ '@type': 'Person', name: a.author }],
-          publisher: {
-            '@type': 'NewsMediaOrganization',
-            name: SITE_NAME,
-            url: absoluteUrl('/'),
-            logo: { '@type': 'ImageObject', url: absoluteUrl('/icons/icon-512.png'), width: 512, height: 512 },
+        jsonLd: [
+          {
+            '@type': 'NewsArticle',
+            '@id': absoluteUrl(path) + '#articulo',
+            headline: a.title.slice(0, 110),
+            description: a.dek || a.summary,
+            abstract: a.summary,
+            image: [
+              hasSize
+                ? { '@type': 'ImageObject', url: image, width: a.imageWidth, height: a.imageHeight }
+                : image,
+            ],
+            datePublished: a.publishedAt,
+            dateModified: a.updatedAt,
+            inLanguage: 'es-ES',
+            articleSection: a.category.name,
+            keywords: a.tags.map((t) => t.name).join(', ') || undefined,
+            isAccessibleForFree: true,
+            timeRequired: a.readingMinutes ? `PT${a.readingMinutes}M` : undefined,
+            author: [authorNode(a.author)],
+            publisher: organizationNode(),
+            isPartOf: { '@id': WEBSITE_ID },
+            mainEntityOfPage: { '@type': 'WebPage', '@id': absoluteUrl(path) },
           },
-          mainEntityOfPage: { '@type': 'WebPage', '@id': absoluteUrl(path) },
-        },
+          breadcrumbNode([
+            { name: 'Portada', path: '/' },
+            { name: a.category.name, path: sectionPath },
+            { name: a.title, path },
+          ]),
+        ],
       });
     }
   }

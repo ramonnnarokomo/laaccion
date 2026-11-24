@@ -25,12 +25,17 @@
     <article class="article">
       <header class="article-head">
         <a class="section-label" [routerLink]="['/seccion', a.category.slug]">{{ a.category.name }}</a>
-        <h1>{{ a.title }}</h1>
+        <h1 [style.--word-em]="wordEm(a.title)">{{ a.title }}</h1>
         @if (a.dek) {
           <p class="dek">{{ a.dek }}</p>
         }
         <div class="byline">
-          Por <span>{{ a.author }}</span> ·
+          Por
+          @if (authorAnchor(); as anchor) {
+            <a class="author-link" routerLink="/quienes-somos" [fragment]="anchor" rel="author">{{ a.author }}</a>
+          } @else {
+            <span>{{ a.author }}</span>
+          } ·
           <time [attr.datetime]="a.publishedAt">{{ a.publishedAt | fecha }}</time> ·
           {{ a.readingMinutes }} min de lectura
         </div>

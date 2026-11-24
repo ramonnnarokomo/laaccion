@@ -3,9 +3,11 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { ArticleSummary } from '../../core/api/models';
 import { ContentService } from '../../core/api/content.service';
-import { SITE_NAME, SeoService, absoluteUrl } from '../../core/seo/seo.service';
+import { SeoService } from '../../core/seo/seo.service';
+import { organizationNode, websiteNode } from '../../core/seo/site-data';
 import { FechaPipe } from '../../core/util/fecha.pipe';
 import { toLoadState } from '../../core/util/load-state';
+import { longestWordEm } from '../../shared/ui/headline-fit';
 import { StoryCard } from '../../shared/ui/story-card';
 import { SunArt } from '../../shared/ui/sun-art';
 
@@ -19,23 +21,14 @@ import { SunArt } from '../../shared/ui/sun-art';
 export class Home {
   private readonly content = inject(ContentService);
   private readonly seo = inject(SeoService);
+  protected readonly wordEm = longestWordEm;
 
   constructor() {
     this.seo.set({
       path: '/',
-      jsonLd: {
-        '@context': 'https://schema.org',
-        '@type': 'WebSite',
-        name: SITE_NAME,
-        url: absoluteUrl('/'),
-        inLanguage: 'es-ES',
-        publisher: {
-          '@type': 'NewsMediaOrganization',
-          name: SITE_NAME,
-          url: absoluteUrl('/'),
-          logo: { '@type': 'ImageObject', url: absoluteUrl('/icons/icon-512.png'), width: 512, height: 512 },
-        },
-      },
+      description:
+        'Periódico independiente de pensamiento, cultura y democracia: análisis político, ideas y debate sobre la Democracia Formal en España.',
+      jsonLd: [organizationNode(), websiteNode()],
     });
   }
 

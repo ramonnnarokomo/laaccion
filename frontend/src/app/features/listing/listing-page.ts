@@ -7,6 +7,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ArticleSummary, Page, Tag } from '../../core/api/models';
 import { ContentService } from '../../core/api/content.service';
 import { SITE_NAME, SeoService, absoluteUrl } from '../../core/seo/seo.service';
+import { ORG_ID, WEBSITE_ID, breadcrumbNode } from '../../core/seo/site-data';
 import { injectHttpStatus } from '../../core/util/http-status';
 import { LoadState, toLoadState } from '../../core/util/load-state';
 import { Pager, pageIndex } from '../../shared/ui/pager';
@@ -146,18 +147,27 @@ export class ListingPage {
       const path = l.page.page > 0 ? `${base}?pagina=${l.page.page + 1}` : base;
       this.seo.set({
         title: l.kind === 'tag' ? `#${l.name}` : l.name,
-        description: l.description || `Artículos de ${l.kind === 'tag' ? 'la etiqueta' : 'la sección'} ${l.name} en ${SITE_NAME}.`,
+        description: l.description
+          ? `${l.name}: ${l.description.trim().replace(/[.\s]+$/, '')}. Artículos de ${SITE_NAME}, periódico independiente de pensamiento, cultura y democracia.`
+          : `Artículos de ${l.kind === 'tag' ? 'la etiqueta' : 'la sección'} ${l.name} en ${SITE_NAME}.`,
         path,
         // Las etiquetas generan muchas páginas finas: se indexan las secciones, no las etiquetas.
         noindex: l.kind === 'tag' || outOfRange,
-        jsonLd: {
-          '@context': 'https://schema.org',
-          '@type': 'CollectionPage',
-          name: l.name,
-          url: absoluteUrl(path),
-          inLanguage: 'es-ES',
-          isPartOf: { '@type': 'WebSite', name: SITE_NAME, url: absoluteUrl('/') },
-        },
+        jsonLd: [
+          {
+            '@type': 'CollectionPage',
+            '@id': absoluteUrl(path),
+            name: l.name,
+            url: absoluteUrl(path),
+            inLanguage: 'es-ES',
+            isPartOf: { '@id': WEBSITE_ID },
+            publisher: { '@id': ORG_ID },
+          },
+          breadcrumbNode([
+            { name: 'Portada', path: '/' },
+            { name: l.kind === 'tag' ? `#${l.name}` : l.name, path: base },
+          ]),
+        ],
       });
     }
   }

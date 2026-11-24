@@ -1,7 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { DOCUMENT } from '@angular/core';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { SeoService, absoluteUrl } from './seo.service';
+import { SeoService, absoluteUrl, metaDescription } from './seo.service';
+import { ORG_ID, authorNode, findEditor } from './site-data';
 
 describe('SeoService', () => {
   let seo: SeoService;
@@ -41,5 +42,39 @@ describe('SeoService', () => {
     expect(JSON.parse(script!.textContent!).headline).toBe('</script><script>alert(1)</script>');
     seo.set({ path: '/' });
     expect(doc.head.querySelector('script#ld-json')).toBeNull();
+  });
+
+  it('publica una lista de nodos como @graph y las medidas de la imagen social', () => {
+    seo.set({ path: '/', image: '/media/a.webp', imageWidth: 1600, imageHeight: 900, jsonLd: [{ '@type': 'A' }, { '@type': 'B' }] });
+    const data = JSON.parse(doc.head.querySelector('script#ld-json')!.textContent!);
+    expect(data['@context']).toBe('https://schema.org');
+    expect(data['@graph'].map((n: { '@type': string }) => n['@type'])).toEqual(['A', 'B']);
+    expect(meta('meta[property="og:image:width"]')).toBe('1600');
+    seo.set({ path: '/b', image: '/media/b.webp' });
+    expect(doc.head.querySelector('meta[property="og:image:width"]')).toBeNull();
+  });
+
+  it('usa la descripción para buscadores y la social para redes', () => {
+    seo.set({ path: '/a', description: 'Resumen largo para Google', socialDescription: 'Entradilla' });
+    expect(meta('meta[name="description"]')).toBe('Resumen largo para Google');
+    expect(meta('meta[property="og:description"]')).toBe('Entradilla');
+  });
+});
+
+describe('metaDescription', () => {
+  it('deja igual un texto corto y recorta uno largo sin partir palabras', () => {
+    expect(metaDescription('  Hola   mundo ')).toBe('Hola mundo');
+    const long = 'palabra '.repeat(40);
+    const out = metaDescription(long);
+    expect(out.length).toBeLessThanOrEqual(160);
+    expect(out.endsWith('palabra…')).toBe(true);
+  });
+});
+
+describe('site-data', () => {
+  it('enlaza a los editores con su ficha y deja a otros autores sin enlace', () => {
+    expect(findEditor('ramón ángel nnar okomo')?.id).toBe('ramon-angel-nnar-okomo');
+    expect(authorNode('Alberto Marín Burguillo')).toMatchObject({ url: absoluteUrl('/quienes-somos#alberto-marin-burguillo'), worksFor: { '@id': ORG_ID } });
+    expect(authorNode('Invitada')).toEqual({ '@type': 'Person', name: 'Invitada' });
   });
 });
