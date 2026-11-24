@@ -214,6 +214,40 @@ main {
   text-transform: uppercase;
   color: var(--stone);
 }
+/* Tablas dentro de los artículos: en móvil se desplazan en horizontal sin ensanchar la página. */
+.prose table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  margin: 1.6em 0;
+  font: 14px/1.4 var(--sans);
+  font-variant-numeric: tabular-nums;
+}
+.prose th,
+.prose td {
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+  white-space: nowrap;
+  p {
+    margin: 0;
+  }
+}
+.prose th {
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink);
+  border-bottom: 2px solid var(--ink);
+  white-space: normal;
+  min-width: 70px;
+}
+.prose tbody tr:nth-child(even) {
+  background: rgba(165, 140, 97, 0.07);
+}
 .byline .author-link {
   color: inherit;
   text-decoration: underline;

@@ -3,6 +3,7 @@ import {
 } from '@angular/core';
 import { Editor } from '@tiptap/core';
 import Image from '@tiptap/extension-image';
+import { TableKit } from '@tiptap/extension-table';
 import StarterKit from '@tiptap/starter-kit';
 import { toVideoEmbed } from '../../../core/util/embed';
 import { Video } from './video-node';
@@ -75,6 +76,8 @@ export class RichEditor implements OnDestroy {
           }),
           Image.configure({ HTMLAttributes: { loading: 'lazy' } }),
           Video,
+          // Conserva las tablas al abrir y guardar (p. ej. la de «¿Cuánto pesa tu voto?»); sin esto se perderían.
+          TableKit.configure({ table: { resizable: false } }),
         ],
         editorProps: { attributes: { class: 'prose rte-prose', 'aria-label': this.label(), role: 'textbox', 'aria-multiline': 'true' } },
         onUpdate: ({ editor }) => {

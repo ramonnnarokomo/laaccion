@@ -21,6 +21,7 @@
     "@angular/ssr": "^21.2.30",
     "@tiptap/core": "^3.34.0",
     "@tiptap/extension-image": "^3.34.0",
+    "@tiptap/extension-table": "^3.34.0",
     "@tiptap/pm": "^3.34.0",
     "@tiptap/starter-kit": "^3.34.0",
     "express": "^5.1.0",
