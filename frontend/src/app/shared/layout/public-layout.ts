@@ -1,5 +1,5 @@
 import { isPlatformBrowser } from '@angular/common';
-import { ChangeDetectionStrategy, Component, ElementRef, PLATFORM_ID, inject, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, PLATFORM_ID, inject, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet, Scroll } from '@angular/router';
 import { filter } from 'rxjs';
@@ -58,7 +58,7 @@ interface NavItem {
         }
       </nav>
 
-      <main id="contenido" tabindex="-1">
+      <main id="contenido" tabindex="-1" #main>
         <router-outlet />
       </main>
 
@@ -79,11 +79,15 @@ interface NavItem {
 export class PublicLayout {
   private readonly router = inject(Router);
   private readonly masthead = viewChild.required<ElementRef<HTMLElement>>('masthead');
+  private readonly main = viewChild.required<ElementRef<HTMLElement>>('main');
   /** Se marca al pulsar una sección y se consume en el siguiente evento de scroll del router. */
   private navClicked = false;
+  /** Deja de seguir el crecimiento de la página (ver followContent). */
+  private stopFollowing?: () => void;
 
   constructor() {
     if (!isPlatformBrowser(inject(PLATFORM_ID))) return;
+    inject(DestroyRef).onDestroy(() => this.stopFollowing?.());
     this.router.events
       .pipe(
         filter((e): e is Scroll => e instanceof Scroll),
@@ -98,7 +102,37 @@ export class PublicLayout {
         // siguiente fotograma, por si su suscripción se ejecuta después que la nuestra.
         this.scrollToSections();
         requestAnimationFrame(() => this.scrollToSections());
+        this.followContent();
       });
+  }
+
+  /**
+   * Si al llegar la página todavía es corta (el contenido está cargando), el navegador no puede bajar
+   * del todo. Durante un par de segundos, cada vez que el contenido crece se vuelve a bajar hasta la
+   * barra; en cuanto el lector toca el scroll, se deja de hacer. En páginas cortas de verdad no pasa
+   * nada: se baja lo que se puede y punto.
+   */
+  private followContent(): void {
+    this.stopFollowing?.();
+    const observer = new ResizeObserver(() => {
+      if (window.scrollY + 4 < this.sectionsTop()) this.scrollToSections();
+    });
+    const userEvents = ['wheel', 'touchstart', 'keydown', 'mousedown'] as const;
+    const stop = () => {
+      observer.disconnect();
+      clearTimeout(timer);
+      userEvents.forEach((type) => window.removeEventListener(type, stop));
+      this.stopFollowing = undefined;
+    };
+    const timer = setTimeout(stop, 2500);
+    userEvents.forEach((type) => window.addEventListener(type, stop, { passive: true }));
+    observer.observe(this.main().nativeElement);
+    this.stopFollowing = stop;
+  }
+
+  /** Posición de la barra de secciones en la página (el final de la cabecera del logo). */
+  private sectionsTop(): number {
+    return Math.round(this.masthead().nativeElement.getBoundingClientRect().bottom + window.scrollY);
   }
 
   protected onNavClick(event: MouseEvent): void {
@@ -112,7 +146,7 @@ export class PublicLayout {
    * así que se mide desde el final de la cabecera y no desde la propia barra.
    */
   private scrollToSections(): void {
-    const top = Math.round(this.masthead().nativeElement.getBoundingClientRect().bottom + window.scrollY);
+    const top = this.sectionsTop();
     const distance = Math.abs(window.scrollY - top);
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const far = distance > window.innerHeight * 1.5;

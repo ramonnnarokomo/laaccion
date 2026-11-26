@@ -173,8 +173,6 @@ textarea {
 main {
   display: block;
   padding: 28px 0 60px;
-  /* Alto mínimo para poder bajar hasta la barra de secciones aunque el contenido aún esté cargando. */
-  min-height: 100vh;
 }
 
 .site-footer {
