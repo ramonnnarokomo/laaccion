@@ -1,5 +1,8 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { isPlatformBrowser } from '@angular/common';
+import { ChangeDetectionStrategy, Component, ElementRef, PLATFORM_ID, inject, viewChild } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Router, RouterLink, RouterLinkActive, RouterOutlet, Scroll } from '@angular/router';
+import { filter } from 'rxjs';
 
 interface NavItem {
   label: string;
@@ -20,7 +23,7 @@ interface NavItem {
         <span>Una publicación independiente</span>
       </div>
 
-      <header class="masthead">
+      <header class="masthead" #masthead>
         <div class="masthead-kicker">
           <span>Ideas para comprender<br />nuestro tiempo</span>
           <span>Fundado sobre el pensamiento crítico</span>
@@ -49,6 +52,7 @@ interface NavItem {
             routerLinkActive="active"
             [routerLinkActiveOptions]="{ exact: !!item.exact }"
             ariaCurrentWhenActive="page"
+            (click)="onNavClick($event)"
             >{{ item.label }}</a
           >
         }
@@ -73,6 +77,50 @@ interface NavItem {
   `,
 })
 export class PublicLayout {
+  private readonly router = inject(Router);
+  private readonly masthead = viewChild.required<ElementRef<HTMLElement>>('masthead');
+  /** Se marca al pulsar una sección y se consume en el siguiente evento de scroll del router. */
+  private navClicked = false;
+
+  constructor() {
+    if (!isPlatformBrowser(inject(PLATFORM_ID))) return;
+    this.router.events
+      .pipe(
+        filter((e): e is Scroll => e instanceof Scroll),
+        takeUntilDestroyed(),
+      )
+      .subscribe((e) => {
+        const fromNav = this.navClicked;
+        this.navClicked = false;
+        // «Atrás»/«adelante» y los enlaces con #ancla siguen como siempre.
+        if (!fromNav || e.position || e.anchor) return;
+        // El router acaba de pedir subir arriba del todo. Lo corregimos ahora y otra vez en el
+        // siguiente fotograma, por si su suscripción se ejecuta después que la nuestra.
+        this.scrollToSections();
+        requestAnimationFrame(() => this.scrollToSections());
+      });
+  }
+
+  protected onNavClick(event: MouseEvent): void {
+    // Igual que RouterLink: solo el clic normal navega dentro de la web (no Ctrl/Cmd/rueda).
+    this.navClicked = event.button === 0 && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey;
+  }
+
+  /**
+   * Baja hasta la barra de secciones, dejando la cabecera del logo fuera de la vista, para que al
+   * entrar en una sección se vea su contenido sin tener que desplazarse. En móvil la barra es fija,
+   * así que se mide desde el final de la cabecera y no desde la propia barra.
+   */
+  private scrollToSections(): void {
+    const top = Math.round(this.masthead().nativeElement.getBoundingClientRect().bottom + window.scrollY);
+    const distance = Math.abs(window.scrollY - top);
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const far = distance > window.innerHeight * 1.5;
+    // Siempre se llama a scrollTo, aunque ya estemos en el sitio: así se cancela la subida suave
+    // hacia arriba que el router puede haber empezado.
+    window.scrollTo({ top, behavior: reduceMotion || far || distance < 4 ? 'instant' : 'smooth' });
+  }
+
   /** Año en hora de Madrid (igual en servidor y navegador). */
   protected readonly year = new Intl.DateTimeFormat('es-ES', { timeZone: 'Europe/Madrid', year: 'numeric' }).format(new Date());
 
